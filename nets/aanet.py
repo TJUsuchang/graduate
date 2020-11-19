@@ -28,7 +28,7 @@ class AANet(nn.Module):
                  no_intermediate_supervision=False,
                  num_stage_blocks=1,
                  num_deform_blocks=3):
-        super(AANet, self).__init__()
+        super().__init__()
 
         self.refinement_type = refinement_type
         self.feature_type = feature_type
