@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from nets.feature import (StereoNetFeature, PSMNetFeature, GANetFeature, GCNetFeature,
-                          FeaturePyrmaid, FeaturePyramidNetwork)
+                          FeaturePyrmaid, FeaturePyramidNetwork, ASFF)
 from nets.resnet import AANetFeature
 from nets.cost import CostVolume, CostVolumePyramid
 from nets.aggregation import (StereoNetAggregation, GCNetAggregation, PSMNetBasicAggregation,
@@ -37,6 +37,9 @@ class AANet(nn.Module):
         self.num_downsample = num_downsample
         self.aggregation_type = aggregation_type
         self.num_scales = num_scales
+        self.level_0_fusion = ASFF(level=0, rfb=True)
+        self.level_1_fusion = ASFF(level=1, rfb=True)
+        self.level_2_fusion = ASFF(level=2, rfb=True)
 
         # Feature extractor
         if feature_type == 'stereonet':
@@ -133,7 +136,14 @@ class AANet(nn.Module):
     def feature_extraction(self, img):
         feature = self.feature_extractor(img)
         if self.feature_pyramid_network or self.feature_pyramid:
-            feature = self.fpn(feature)
+            out = self.fpn(feature)
+            x_level_0 = out[-1]
+            x_level_1 = out[1]
+            x_level_2 = out[0]
+            fusion1 = self.level_0_fusion(x_level_0, x_level_1, x_level_2)
+            fusion2 = self.level_1_fusion(x_level_0, x_level_1, x_level_2)
+            fusion3 = self.level_2_fusion(x_level_0, x_level_1, x_level_2)
+            feature = [fusion1, fusion2, fusion3]
         return feature
 
     def cost_volume_construction(self, left_feature, right_feature):
