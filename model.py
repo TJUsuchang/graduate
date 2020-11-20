@@ -71,19 +71,23 @@ class Model(object):
                 pred_disp_pyramid = [pred_disp_pyramid[-1]]  # only the last highest resolution output
 
             disp_loss = 0
+            depth_loss = 0
             pseudo_disp_loss = 0
             pyramid_loss = []
+            pyramid_depth_loss = 0
             pseudo_pyramid_loss = []
 
             # Loss weights
             if len(pred_disp_pyramid) == 5:
                 pyramid_weight = [1 / 3, 2 / 3, 1.0, 1.0, 1.0]  # AANet and AANet+
+                pyramid_depth_weight = [1 / 3, 2 / 3, 1.0, 1.0, 1.0]
             elif len(pred_disp_pyramid) == 4:
                 pyramid_weight = [1 / 3, 2 / 3, 1.0, 1.0]
             elif len(pred_disp_pyramid) == 3:
                 pyramid_weight = [1.0, 1.0, 1.0]  # 1 scale only
             elif len(pred_disp_pyramid) == 1:
                 pyramid_weight = [1.0]  # highest loss only
+                pyramid_depth_weight = [1.0]
             else:
                 raise NotImplementedError
 
@@ -91,6 +95,7 @@ class Model(object):
             for k in range(len(pred_disp_pyramid)):
                 pred_disp = pred_disp_pyramid[k]
                 weight = pyramid_weight[k]
+                depth_weight = pyramid_depth_weight[k]
 
                 if pred_disp.size(-1) != gt_disp.size(-1):
                     pred_disp = pred_disp.unsqueeze(1)  # [B, 1, H, W]
@@ -101,9 +106,14 @@ class Model(object):
                 curr_loss = F.smooth_l1_loss(pred_disp[mask], gt_disp[mask],
                                              reduction='mean')
                 disp_loss += weight * curr_loss
+
+                curr_depth_loss = F.smooth_l1_loss(1 / pred_disp[mask], 1 / gt_disp[mask], reduction='mean')
+                depth_loss += depth_weight * curr_depth_loss
                 pyramid_loss.append(curr_loss)
+                pyramid_depth_loss.append(curr_depth_loss)
 
                 # Pseudo gt loss
+                # for KITTI
                 if args.load_pseudo_gt:
                     pseudo_curr_loss = F.smooth_l1_loss(pred_disp[pseudo_mask], pseudo_gt_disp[pseudo_mask],
                                                         reduction='mean')
@@ -111,7 +121,7 @@ class Model(object):
 
                     pseudo_pyramid_loss.append(pseudo_curr_loss)
 
-            total_loss = disp_loss + pseudo_disp_loss
+            total_loss = disp_loss + depth_loss + pseudo_disp_loss
 
             self.optimizer.zero_grad()
             total_loss.backward()
@@ -123,9 +133,9 @@ class Model(object):
                 this_cycle = time.time() - last_print_time
                 last_print_time += this_cycle
 
-                logger.info('Epoch: [%3d/%3d] [%5d/%5d] time: %4.2fs disp_loss: %.3f' %
+                logger.info('Epoch: [%3d/%3d] [%5d/%5d] time: %4.2fs disp_loss: %.3f depth_loss: %.3f'%
                             (self.epoch + 1, args.max_epoch, i + 1, steps_per_epoch, this_cycle,
-                             disp_loss.item()))
+                             disp_loss.item(), depth_loss.item()))
 
             if self.num_iter % args.summary_freq == 0:
                 img_summary = dict()
@@ -158,6 +168,7 @@ class Model(object):
 
                 self.train_writer.add_scalar('train/epe', epe.item(), self.num_iter)
                 self.train_writer.add_scalar('train/disp_loss', disp_loss.item(), self.num_iter)
+                self.train_writer.add_scalar('train/depth_loss', depth_loss.item(), self.num_iter)
                 self.train_writer.add_scalar('train/total_loss', total_loss.item(), self.num_iter)
 
                 # Save loss of different scale
