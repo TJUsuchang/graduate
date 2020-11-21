@@ -188,7 +188,7 @@ class SimpleBottleneck(nn.Module):
         self.relu = nn.ReLU(inplace=True)
 
         self.ca = ChannelAttention(planes)
-        self.sa = SpatialAttention()
+        # self.sa = SpatialAttention()
 
         self.downsample = downsample
         self.stride = stride
@@ -208,7 +208,7 @@ class SimpleBottleneck(nn.Module):
         out = self.bn3(out)
 
         out = self.ca(out) * out
-        out = self.sa(out) * out
+        # out = self.sa(out) * out
 
         if self.downsample is not None:
             identity = self.downsample(x)
@@ -247,7 +247,7 @@ class DeformSimpleBottleneck(nn.Module):
         self.relu = nn.ReLU(inplace=True)
 
         self.ca = ChannelAttention(planes)
-        self.sa = SpatialAttention()
+        # self.sa = SpatialAttention()
 
         self.downsample = downsample
         self.stride = stride
@@ -267,7 +267,7 @@ class DeformSimpleBottleneck(nn.Module):
         out = self.bn3(out)
 
         out = self.ca(out) * out
-        out = self.sa(out) * out
+        # out = self.sa(out) * out
 
         if self.downsample is not None:
             identity = self.downsample(x)

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from nets.deform import SimpleBottleneck, DeformSimpleBottleneck
+from nets.deform import SimpleBottleneck, DeformSimpleBottleneck, ChannelAttention, SpatialAttention
 
 
 def conv3d(in_channels, out_channels, kernel_size=3, stride=1, dilation=1, groups=1):
@@ -324,6 +324,7 @@ class AdaptiveAggregationModule(nn.Module):
         self.num_blocks = num_blocks
 
         self.branches = nn.ModuleList()
+        self.sa1 = SpatialAttention()
 
         # Adaptive intra-scale aggregation
         for i in range(self.num_scales):
@@ -397,6 +398,7 @@ class AdaptiveAggregationModule(nn.Module):
                     x_fused[i] = x_fused[i] + exchange
 
         for i in range(len(x_fused)):
+            x_fused[i] = self.sa1(x_fused[i]) * x_fused[i]
             x_fused[i] = self.relu(x_fused[i])
 
         return x_fused
@@ -415,7 +417,7 @@ class AdaptiveAggregation(nn.Module):
         self.max_disp = max_disp
         self.num_scales = num_scales
         self.num_fusions = num_fusions
-        self.intermediate_supervision = intermediate_supervision
+        self.intermediate_supervision = intermediate_supervision # 中间监督 while train
 
         fusions = nn.ModuleList()
         for i in range(num_fusions):
