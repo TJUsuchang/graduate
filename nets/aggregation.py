@@ -335,20 +335,20 @@ class ASFF(nn.Module):
     def __init__(self, level, rfb=False, vis=False):
         super(ASFF, self).__init__()
         self.level = level
-        self.dim = [64, 32, 16]
+        self.dim = [16, 32, 64]
         self.inter_dim = self.dim[self.level]
         if level==0:
-            self.stride_level_1 = add_conv(64, self.inter_dim, 3, 2)
+            self.stride_level_1 = add_conv(32, self.inter_dim, 3, 2)
             self.stride_level_2 = add_conv(64, self.inter_dim, 3, 2)
-            self.expand = add_conv(self.inter_dim, 64, 3, 1)
+            self.expand = add_conv(self.inter_dim, 16, 3, 1)
         elif level==1:
-            self.compress_level_0 = add_conv(32, self.inter_dim, 1, 1)
-            self.stride_level_2 = add_conv(16, self.inter_dim, 3, 2)
+            self.compress_level_0 = add_conv(16, self.inter_dim, 1, 1)
+            self.stride_level_2 = add_conv(64, self.inter_dim, 3, 2)
             self.expand = add_conv(self.inter_dim, 32, 3, 1)
         elif level==2:
-            self.compress_level_0 = add_conv(64, self.inter_dim, 1, 1)
-            self.compress_level_1 = add_conv(16, self.inter_dim, 1, 1)
-            self.expand = add_conv(self.inter_dim, 16, 3, 1)
+            self.compress_level_0 = add_conv(16, self.inter_dim, 1, 1)
+            self.compress_level_1 = add_conv(32, self.inter_dim, 1, 1)
+            self.expand = add_conv(self.inter_dim, 64, 3, 1)
 
         compress_c = 8 if rfb else 16  #when adding rfb, we use half number of channels to save memory
 
@@ -378,13 +378,14 @@ class ASFF(nn.Module):
         elif self.level==2:
             level_0_compressed = self.compress_level_0(x_level_0)
             level_0_resized =F.interpolate(level_0_compressed, scale_factor=4, mode='nearest')
-            level_1_resized =F.interpolate(x_level_1, scale_factor=2, mode='nearest')
+            level_1_compressed = self.compress_level_1(x_level_1)
+            level_1_resized =F.interpolate(level_1_compressed, scale_factor=2, mode='nearest')
             level_2_resized =x_level_2
 
         level_0_weight_v = self.weight_level_0(level_0_resized)
         level_1_weight_v = self.weight_level_1(level_1_resized)
         level_2_weight_v = self.weight_level_2(level_2_resized)
-        levels_weight_v = torch.cat((level_0_weight_v, level_1_weight_v, level_2_weight_v),1)
+        levels_weight_v = torch.cat((level_0_weight_v, level_1_weight_v, level_2_weight_v), 1)
         levels_weight = self.weight_levels(levels_weight_v)
         levels_weight = F.softmax(levels_weight, dim=1)
 
@@ -552,9 +553,9 @@ class AdaptiveAggregation(nn.Module):
         out = []  # 1/3, 1/6, 1/12
         for i in range(len(self.final_conv)):
             out = out + [self.final_conv[i](cost_volume[i])]
-        x_layer_0 = out[0]
+        x_layer_0 = out[2]
         x_layer_1 = out[1]
-        x_layer_2 = out[2]
+        x_layer_2 = out[0]
         fusion0 = self.fusions0(x_layer_0, x_layer_1, x_layer_2)
         fusion1 = self.fusions1(x_layer_0, x_layer_1, x_layer_2)
         fusion2 = self.fusions2(x_layer_0, x_layer_1, x_layer_2)
