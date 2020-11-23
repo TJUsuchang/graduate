@@ -340,15 +340,15 @@ class ASFF(nn.Module):
         if level==0:
             self.stride_level_1 = add_conv(64, self.inter_dim, 3, 2)
             self.stride_level_2 = add_conv(64, self.inter_dim, 3, 2)
-            self.expand = add_conv(self.inter_dim, 128, 3, 1)
+            self.expand = add_conv(self.inter_dim, 64, 3, 1)
         elif level==1:
             self.compress_level_0 = add_conv(32, self.inter_dim, 1, 1)
             self.stride_level_2 = add_conv(16, self.inter_dim, 3, 2)
-            self.expand = add_conv(self.inter_dim, 64, 3, 1)
+            self.expand = add_conv(self.inter_dim, 32, 3, 1)
         elif level==2:
             self.compress_level_0 = add_conv(64, self.inter_dim, 1, 1)
             self.compress_level_1 = add_conv(16, self.inter_dim, 1, 1)
-            self.expand = add_conv(self.inter_dim, 32, 3, 1)
+            self.expand = add_conv(self.inter_dim, 16, 3, 1)
 
         compress_c = 8 if rfb else 16  #when adding rfb, we use half number of channels to save memory
 
@@ -555,9 +555,9 @@ class AdaptiveAggregation(nn.Module):
         x_layer_0 = out[0]
         x_layer_1 = out[1]
         x_layer_2 = out[2]
-        fusions0 = self.level_0_fusion(x_layer_0, x_layer_1, x_layer_2)
-        fusions1 = self.level_1_fusion(x_layer_0, x_layer_1, x_layer_2)
-        fusions2 = self.level_2_fusion(x_layer_0, x_layer_1, x_layer_2)
-        out = [fusions0, fusions1, fusions2]
+        fusion0 = self.fusions0(x_layer_0, x_layer_1, x_layer_2)
+        fusion1 = self.fusions1(x_layer_0, x_layer_1, x_layer_2)
+        fusion2 = self.fusions2(x_layer_0, x_layer_1, x_layer_2)
+        out = [fusion0, fusion1, fusion2]
 
         return out
