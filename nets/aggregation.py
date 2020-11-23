@@ -505,6 +505,9 @@ class AdaptiveAggregation(nn.Module):
         self.num_scales = num_scales
         self.num_fusions = num_fusions
         self.intermediate_supervision = intermediate_supervision
+        self.fusions0 = ASFF(level=0, rfb=True)
+        self.fusions1 = ASFF(level=1, rfb=True)
+        self.fusions2 = ASFF(level=2, rfb=True)
 
         fusions = nn.ModuleList()
         for i in range(num_fusions):
