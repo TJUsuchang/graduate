@@ -308,6 +308,23 @@ class GCNetAggregation(nn.Module):
 
         return out
 
+class ChannelAttention(nn.Module):
+    def __init__(self, in_planes, ratio=16):
+        super(ChannelAttention, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+
+        self.fc1   = nn.Conv2d(in_planes, in_planes // 16, 1, bias=False)
+        self.relu1 = nn.ReLU()
+        self.fc2   = nn.Conv2d(in_planes // 16, in_planes, 1, bias=False)
+
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = self.fc2(self.relu1(self.fc1(self.avg_pool(x))))
+        max_out = self.fc2(self.relu1(self.fc1(self.max_pool(x))))
+        out = avg_out + max_out
+        return self.sigmoid(out)
 
 # Adaptive intra-scale aggregation & adaptive cross-scale aggregation
 class AdaptiveAggregationModule(nn.Module):
@@ -340,11 +357,13 @@ class AdaptiveAggregationModule(nn.Module):
             self.branches.append(nn.Sequential(*branch))
 
         self.fuse_layers = nn.ModuleList()
-
+        self.ca = nn.ModuleList()
         # Adaptive cross-scale aggregation
         # For each output branch
         for i in range(self.num_output_branches):
             self.fuse_layers.append(nn.ModuleList())
+            self.ca.append(nn.ModuleList())
+            self.ca[-1].append(ChannelAttention(max_disp // (2 ** i)))
             # For each branch (different scale)
             for j in range(self.num_scales):
                 if i == j:
@@ -397,6 +416,7 @@ class AdaptiveAggregationModule(nn.Module):
                     x_fused[i] = x_fused[i] + exchange
 
         for i in range(len(x_fused)):
+            x_fused[i] = self.ca[i](x_fused[i]) * x_fused[i]
             x_fused[i] = self.relu(x_fused[i])
 
         return x_fused
