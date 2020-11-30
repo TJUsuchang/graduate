@@ -1,7 +1,25 @@
 import torch.nn as nn
+import torch
 
 from nets.deform_conv import DeformConv, ModulatedDeformConv
 
+class ChannelAttention(nn.Module):
+    def __init__(self, in_planes, ratio=16):
+        super(ChannelAttention, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+
+        self.fc1   = nn.Conv2d(in_planes, in_planes // 16, 1, bias=False)
+        self.relu1 = nn.ReLU()
+        self.fc2   = nn.Conv2d(in_planes // 16, in_planes, 1, bias=False)
+
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = self.fc2(self.relu1(self.fc1(self.avg_pool(x))))
+        max_out = self.fc2(self.relu1(self.fc1(self.max_pool(x))))
+        out = avg_out + max_out
+        return self.sigmoid(out)
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
     """3x3 convolution with padding"""
@@ -151,6 +169,9 @@ class SimpleBottleneck(nn.Module):
         self.conv3 = conv1x1(width, planes)
         self.bn3 = norm_layer(planes)
         self.relu = nn.ReLU(inplace=True)
+
+        self.ca = ChannelAttention(inplanes)
+
         self.downsample = downsample
         self.stride = stride
 
@@ -167,6 +188,8 @@ class SimpleBottleneck(nn.Module):
 
         out = self.conv3(out)
         out = self.bn3(out)
+
+        out = self.ca(out) * out
 
         if self.downsample is not None:
             identity = self.downsample(x)
