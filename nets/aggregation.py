@@ -340,11 +340,14 @@ class AdaptiveAggregationModule(nn.Module):
             self.branches.append(nn.Sequential(*branch))
 
         self.fuse_layers = nn.ModuleList()
+        self.ca = nn.ModuleList()
 
         # Adaptive cross-scale aggregation
         # For each output branch
         for i in range(self.num_output_branches):
             self.fuse_layers.append(nn.ModuleList())
+            self.ca.append(nn.ModuleList())
+            self.ca[-1].append(ChannelAttention(max_disp // (2 ** i)))
             # For each branch (different scale)
             for j in range(self.num_scales):
                 if i == j:
@@ -371,7 +374,7 @@ class AdaptiveAggregationModule(nn.Module):
                     self.fuse_layers[-1].append(nn.Sequential(*layers))
 
         self.relu = nn.LeakyReLU(0.2, inplace=True)
-        self.ca = ChannelAttention(max_disp // (2 ** i))
+        # self.ca = ChannelAttention(max_disp // (2 ** i))
 
     def forward(self, x):
         assert len(self.branches) == len(x)
@@ -396,7 +399,7 @@ class AdaptiveAggregationModule(nn.Module):
                         exchange = F.interpolate(exchange, size=x_fused[i].size()[2:],
                                                  mode='bilinear', align_corners=False)
                     x_fused[i] = x_fused[i] + exchange
-        x_fused[i] = self.ca(x_fused[i]) * x_fused[i]
+            x_fused[i] = self.ca[i](x_fused[i]) * x_fused[i]
 
         for i in range(len(x_fused)):
             x_fused[i] = self.relu(x_fused[i])
