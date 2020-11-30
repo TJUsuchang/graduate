@@ -362,8 +362,7 @@ class AdaptiveAggregationModule(nn.Module):
         # For each output branch
         for i in range(self.num_output_branches):
             self.fuse_layers.append(nn.ModuleList())
-            self.ca.append(nn.ModuleList())
-            self.ca[-1].append(ChannelAttention(max_disp // (2 ** i)))
+            self.ca.append(ChannelAttention(max_disp // (2 ** i)))
             # For each branch (different scale)
             for j in range(self.num_scales):
                 if i == j:
