@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from nets.deform import SimpleBottleneck, DeformSimpleBottleneck
+from nets.deform import SimpleBottleneck, DeformSimpleBottleneck, ChannelAttention
 
 
 def conv3d(in_channels, out_channels, kernel_size=3, stride=1, dilation=1, groups=1):
@@ -371,6 +371,7 @@ class AdaptiveAggregationModule(nn.Module):
                     self.fuse_layers[-1].append(nn.Sequential(*layers))
 
         self.relu = nn.LeakyReLU(0.2, inplace=True)
+        self.ca = ChannelAttention(max_disp // (2 ** i))
 
     def forward(self, x):
         assert len(self.branches) == len(x)
@@ -395,6 +396,7 @@ class AdaptiveAggregationModule(nn.Module):
                         exchange = F.interpolate(exchange, size=x_fused[i].size()[2:],
                                                  mode='bilinear', align_corners=False)
                     x_fused[i] = x_fused[i] + exchange
+        x_fused[i] = self.ca(x_fused[i]) * x_fused[i]
 
         for i in range(len(x_fused)):
             x_fused[i] = self.relu(x_fused[i])
