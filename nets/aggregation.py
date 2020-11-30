@@ -308,6 +308,22 @@ class GCNetAggregation(nn.Module):
 
         return out
 
+class SpatialAttention(nn.Module):
+    def __init__(self, kernel_size=7):
+        super(SpatialAttention, self).__init__()
+
+        assert kernel_size in (3, 7), 'kernel size must be 3 or 7'
+        padding = 3 if kernel_size == 7 else 1
+
+        self.conv1 = nn.Conv2d(2, 1, kernel_size, padding=padding, bias=False)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        x = torch.cat([avg_out, max_out], dim=1)
+        x = self.conv1(x)
+        return self.sigmoid(x)
 
 # Adaptive intra-scale aggregation & adaptive cross-scale aggregation
 class AdaptiveAggregationModule(nn.Module):
@@ -340,6 +356,7 @@ class AdaptiveAggregationModule(nn.Module):
             self.branches.append(nn.Sequential(*branch))
 
         self.fuse_layers = nn.ModuleList()
+        self.sa = SpatialAttention()
 
         # Adaptive cross-scale aggregation
         # For each output branch
@@ -397,6 +414,7 @@ class AdaptiveAggregationModule(nn.Module):
                     x_fused[i] = x_fused[i] + exchange
 
         for i in range(len(x_fused)):
+            x_fused[i] = self.sa(x_fused[i]) * x_fused[i]
             x_fused[i] = self.relu(x_fused[i])
 
         return x_fused
