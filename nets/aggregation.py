@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from nets.deform import SimpleBottleneck, DeformSimpleBottleneck
-
+from nets.bam import *
 
 def conv3d(in_channels, out_channels, kernel_size=3, stride=1, dilation=1, groups=1):
     return nn.Sequential(nn.Conv3d(in_channels, out_channels, kernel_size=kernel_size,
@@ -340,11 +340,12 @@ class AdaptiveAggregationModule(nn.Module):
             self.branches.append(nn.Sequential(*branch))
 
         self.fuse_layers = nn.ModuleList()
-
+        self.bam = nn.ModuleList()
         # Adaptive cross-scale aggregation
         # For each output branch
         for i in range(self.num_output_branches):
             self.fuse_layers.append(nn.ModuleList())
+            self.bam.append(BAM(max_disp // (2 ** i)))
             # For each branch (different scale)
             for j in range(self.num_scales):
                 if i == j:
@@ -397,6 +398,7 @@ class AdaptiveAggregationModule(nn.Module):
                     x_fused[i] = x_fused[i] + exchange
 
         for i in range(len(x_fused)):
+            x_fused[i] = self.bam[i](x_fused[i])
             x_fused[i] = self.relu(x_fused[i])
 
         return x_fused

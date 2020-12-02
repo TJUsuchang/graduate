@@ -1,7 +1,6 @@
 import torch.nn as nn
 
 from nets.deform_conv import DeformConv, ModulatedDeformConv
-from nets.bam import *
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
     """3x3 convolution with padding"""
@@ -151,7 +150,6 @@ class SimpleBottleneck(nn.Module):
         self.conv3 = conv1x1(width, planes)
         self.bn3 = norm_layer(planes)
         self.relu = nn.ReLU(inplace=True)
-        self.bam = BAM(inplanes)
         self.downsample = downsample
         self.stride = stride
 
@@ -168,8 +166,6 @@ class SimpleBottleneck(nn.Module):
 
         out = self.conv3(out)
         out = self.bn3(out)
-
-        out = self.bam(out)
 
         if self.downsample is not None:
             identity = self.downsample(x)
@@ -206,7 +202,6 @@ class DeformSimpleBottleneck(nn.Module):
         self.conv3 = conv1x1(width, planes)
         self.bn3 = norm_layer(planes)
         self.relu = nn.ReLU(inplace=True)
-        self.bam = BAM(inplanes)
         self.downsample = downsample
         self.stride = stride
 
@@ -223,8 +218,6 @@ class DeformSimpleBottleneck(nn.Module):
 
         out = self.conv3(out)
         out = self.bn3(out)
-
-        out = self.bam(out)
 
         if self.downsample is not None:
             identity = self.downsample(x)
