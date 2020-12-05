@@ -465,9 +465,9 @@ class AdaptiveAggregationModule(nn.Module):
                 #         exchange = F.interpolate(exchange, size=x_fused[i].size()[2:],
                 #                                  mode='bilinear', align_corners=False)
                 #     x_fused[i] = x_fused[i] + exchange
-        x_fusion.append(x_fused[0] * x_fused[1] * x_fused[2])
-        x_fusion.append(x_fused[3] * x_fused[4] * x_fused[5])
-        x_fusion.append(x_fused[6] + x_fused[7] * x_fused[8])
+        x_fusion.append(x_fused[0] + x_fused[1] + x_fused[2])
+        x_fusion.append(x_fused[3] + x_fused[4] + x_fused[5])
+        x_fusion.append(x_fused[6] + x_fused[7] + x_fused[8])
         for i in range(len(x_fusion)):
             x_fusion[i] = self.relu(x_fusion[i])
 
