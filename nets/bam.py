@@ -30,7 +30,6 @@ class DoubleChannelGate_up(nn.Module):
         chout = b
         return chout
 
-
 class ChannelGate_down(nn.Module):
     def __init__(self, in_planes):
         super(ChannelGate_down, self).__init__()
