@@ -339,6 +339,7 @@ class AdaptiveAggregationModule(nn.Module):
 
             self.branches.append(nn.Sequential(*branch))
 
+        self.fuse_layers = nn.ModuleList()
         self.sa = nn.ModuleList()
         self.ca = nn.ModuleList()
 
@@ -346,38 +347,38 @@ class AdaptiveAggregationModule(nn.Module):
         # For each output branch
         for i in range(self.num_output_branches):
             self.ca.append(Channelatt(max_disp // (2 ** i)))
-            self.fuse_layers.append(nn.ModuleList())
+            # self.fuse_layers.append(nn.ModuleList())
             # For each branch (different scale)
             if i == 0:
-                for j in range(len(self.fuse_layers)):
+                for j in range(self.num_scales):
                     if j == 0:
-                        self.fuse_layers[-1].append(nn.Identity())
+                        self.fuse_layers.append(nn.Identity())
                     elif j == 1:
-                        self.sa[-1].append(Spatialatt_up(max_disp // (2 ** j)))
-                        self.fuse_layers[-1].append(self.ca[-1] * self.sa[-1])
+                        self.sa.append(Spatialatt_up(max_disp // (2 ** j)))
+                        # self.fuse_layers.append(self.ca[-1] * self.sa[-1])
                     elif j == 2:
-                        self.sa[-1].append(DoubleSpatialatt_up(max_disp // (2 ** j)))
-                        self.fuse_layers[-1].append(self.ca[-1] * self.sa[-1])
+                        self.sa.append(DoubleSpatialatt_up(max_disp // (2 ** j)))
+                        # self.fuse_layers.append(self.ca[-1] * self.sa[-1])
             elif i == 1:
-                for j in range(len(self.fuse_layers)):
+                for j in range(self.num_scales):
                     if j == 0:
-                        self.sa[-1].append(Spatialatt_down(max_disp // (2 ** j)))
-                        self.fuse_layers[-1].append(self.ca[-1] * self.sa[-1])
+                        self.sa.append(Spatialatt_down(max_disp // (2 ** j)))
+                        # self.fuse_layers.append(self.ca[-1] * self.sa[-1])
                     elif j == 1:
-                        self.fuse_layers[-1].append(nn.Identity())
+                        self.fuse_layers.append(nn.Identity())
                     elif j == 2:
-                        self.sa[-1].append(Spatialatt_up(max_disp // (2 ** j)))
-                        self.fuse_layers[-1].append(self.ca[-1] * self.sa[-1])
+                        self.sa.append(Spatialatt_up(max_disp // (2 ** j)))
+                        # self.fuse_layers.append(self.ca[-1] * self.sa[-1])
             elif i == 2:
-                for j in range(len(self.fuse_layers)):
+                for j in range(self.num_scales):
                     if j == 0:
-                        self.sa[-1].append(DoubleSpatialatt_down(max_disp // (2 ** j)))
-                        self.fuse_layers[-1].append(self.ca[-1] * self.sa[-1])
+                        self.sa.append(DoubleSpatialatt_down(max_disp // (2 ** j)))
+                        # self.fuse_layers.append(self.ca[-1] * self.sa[-1])
                     elif j == 1:
-                        self.sa[-1].append(Spatialatt_down(max_disp // (2 ** j)))
-                        self.fuse_layers[-1].append(self.ca[-1] * self.sa[-1])
+                        self.sa.append(Spatialatt_down(max_disp // (2 ** j)))
+                        # self.fuse_layers.append(self.ca[-1] * self.sa[-1])
                     elif j == 2:
-                        self.fuse_layers[-1].append(nn.Identity())
+                        self.fuse_layers.append(nn.Identity())
             # if i == 0:
             #     for i in range(len(self.fuse_layers)):
             #         if j == 0:
@@ -426,18 +427,29 @@ class AdaptiveAggregationModule(nn.Module):
         for i in range(len(self.fuse_layers)):
             if i == 0:
                 for j in range(len(self.branches)):
-                    x_fused.append(self.fuse_layers[i][j](x[j]))
+                    if j == 0:
+                        x_fused.append(self.fuse_layers[0](x[0]))
+                    elif j == 1:
+                        x_fused.append(self.ca[0](x[0]) * self.sa[0](x[1]))
+                    elif j == 2:
+                        x_fused.append(self.ca[0](x[0]) * self.sa[1](x[2]))
             elif i == 1:
                 for j in range(len(self.branches)):
-                    x_fused.append(self.fuse_layers[i][j](x[j]))
+                    if j == 0:
+                        x_fused.append(self.ca[1](x[1]) * self.sa[2](x[0]))
+                    elif j == 1:
+                        x_fused.append(self.fuse_layers[1](x[1]))
+                    elif j == 2:
+                        x_fused.append(self.ca[1](x[1]) * self.sa[3](x[2]))
             elif i == 2:
                 for j in range(len(self.branches)):
-                    # print(j, j in range(1, len(self.branches)))
-                    # print(x[j].shape[1])
-                    # print(x_fused[-1].shape[1])
-                    x_fused.append(self.fuse_layers[i][j](x[j]))
-                    # print(x_fused[-1].shape[1])
-                    # print(x[j].shape[1] // (2 ** j))
+                    if j == 0:
+                        x_fused.append(self.ca[2](x[2]) * self.sa[4](x[0]))
+                    elif j == 1:
+                        x_fused.append(self.ca[2](x[2]) * self.sa[5](x[1]))
+                    elif j == 2:
+                        x_fused.append(self.fuse_layers[2](x[2]))
+
                 # if j == 0:
                 #     x_fused.append(self.fuse_layers[i][0](x[0]))
                 # else:
