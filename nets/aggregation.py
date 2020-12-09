@@ -314,7 +314,6 @@ class AdaptiveAggregationModule(nn.Module):
     def __init__(self, num_scales, num_output_branches, max_disp,
                  num_blocks=1,
                  simple_bottleneck=False,
-                 simple_bam=False,
                  deformable_groups=2,
                  mdconv_dilation=2):
         super(AdaptiveAggregationModule, self).__init__()
@@ -340,91 +339,73 @@ class AdaptiveAggregationModule(nn.Module):
 
             self.branches.append(nn.Sequential(*branch))
 
-        self.fuse_layers = nn.ModuleList()
+        self.sa = nn.ModuleList()
+        self.ca = nn.ModuleList()
 
         # Adaptive cross-scale aggregation
         # For each output branch
         for i in range(self.num_output_branches):
+            self.ca.append(Channelatt(max_disp // (2 ** i)))
             self.fuse_layers.append(nn.ModuleList())
             # For each branch (different scale)
             if i == 0:
-                for j in range(self.num_scales):
+                for j in range(len(self.fuse_layers)):
                     if j == 0:
-                        # Identity
                         self.fuse_layers[-1].append(nn.Identity())
                     elif j == 1:
-                        if simple_bam:
-                            self.fuse_layers[-1].append(SimpleBAM_up(max_disp // (2 ** j)))
-                        else:
-                            self.fuse_layers[-1].append(BAM_up(max_disp // (2 ** j)))
+                        self.sa[-1].append(Spatialatt_up(max_disp // (2 ** j)))
+                        self.fuse_layers[-1].append(self.ca[-1] * self.sa[-1])
                     elif j == 2:
-                        if simple_bam:
-                            self.fuse_layers[-1].append(DoubleSimpleBAM_up(max_disp // (2 ** j)))
-                        else:
-                            self.fuse_layers[-1].append(DoubleBAM_up(max_disp // (2 ** j)))
+                        self.sa[-1].append(DoubleSpatialatt_up(max_disp // (2 ** j)))
+                        self.fuse_layers[-1].append(self.ca[-1] * self.sa[-1])
             elif i == 1:
-                for j in range(self.num_scales):
-                    if j == 1:
-                        # Identity
+                for j in range(len(self.fuse_layers)):
+                    if j == 0:
+                        self.sa[-1].append(Spatialatt_down(max_disp // (2 ** j)))
+                        self.fuse_layers[-1].append(self.ca[-1] * self.sa[-1])
+                    elif j == 1:
                         self.fuse_layers[-1].append(nn.Identity())
                     elif j == 2:
-                        if simple_bam:
-                            self.fuse_layers[-1].append(SimpleBAM_up(max_disp // (2 ** j)))
-                        else:
-                            self.fuse_layers[-1].append(BAM_up(max_disp // (2 ** j)))
-                    elif j == 0:
-                        if simple_bam:
-                            self.fuse_layers[-1].append(SimpleBAM_down(max_disp // (2 ** j)))
-                        else:
-                            self.fuse_layers[-1].append(BAM_down(max_disp // (2 ** j)))
+                        self.sa[-1].append(Spatialatt_up(max_disp // (2 ** j)))
+                        self.fuse_layers[-1].append(self.ca[-1] * self.sa[-1])
             elif i == 2:
-                for j in range(self.num_scales):
-                    if j == 2:
-                        # Identity
-                        self.fuse_layers[-1].append(nn.Identity())
+                for j in range(len(self.fuse_layers)):
+                    if j == 0:
+                        self.sa[-1].append(DoubleSpatialatt_down(max_disp // (2 ** j)))
+                        self.fuse_layers[-1].append(self.ca[-1] * self.sa[-1])
                     elif j == 1:
-                        if simple_bam:
-                            self.fuse_layers[-1].append(SimpleBAM_down(max_disp // (2 ** j)))
-                        else:
-                            self.fuse_layers[-1].append(BAM_down(max_disp // (2 ** j)))
-                    elif j == 0:
-                        if simple_bam:
-                            self.fuse_layers[-1].append(DoubleSimpleBAM_down(max_disp // (2 ** j)))
-                        else:
-                            self.fuse_layers[-1].append(DoubleBAM_down(max_disp // (2 ** j)))
-
-            # for j in range(self.num_scales):
-            #     if i == j:
-            #         # Identity
-            #         self.fuse_layers[-1].append(nn.Identity())
-            #     elif i < j:
-            #         if simple_bam:
+                        self.sa[-1].append(Spatialatt_down(max_disp // (2 ** j)))
+                        self.fuse_layers[-1].append(self.ca[-1] * self.sa[-1])
+                    elif j == 2:
+                        self.fuse_layers[-1].append(nn.Identity())
+            # if i == 0:
+            #     for i in range(len(self.fuse_layers)):
+            #         if j == 0:
+            #             # Identity
+            #             self.fuse_layers[-1].append(nn.Identity())
+            #         elif j == 1:
             #             self.fuse_layers[-1].append(SimpleBAM_up(max_disp // (2 ** j)))
-            #         else:
-            #             self.fuse_layers[-1].append(BAM_up(max_disp // (2 ** j)))
-            #         # self.fuse_layers[-1].append(
-            #         #     nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
-            #         #                             kernel_size=1, bias=False),
-            #         #                   nn.BatchNorm2d(max_disp // (2 ** i)),
-            #         #                   ))
-            #     elif i > j:
-            #         if simple_bam:
+            #         elif j == 2:
+            #             self.fuse_layers[-1].append(DoubleSimpleBAM_up(max_disp // (2 ** j)))
+            #
+            # elif i == 1:
+            #     for j in range(self.num_scales):
+            #         if j == 1:
+            #             # Identity
+            #             self.fuse_layers[-1].append(nn.Identity())
+            #         elif j == 2:
+            #             self.fuse_layers[-1].append(SimpleBAM_up(max_disp // (2 ** j)))
+            #         elif j == 0:
             #             self.fuse_layers[-1].append(SimpleBAM_down(max_disp // (2 ** j)))
-            #         else:
-            #             self.fuse_layers[-1].append(BAM_down(max_disp // (2 ** j)))
-            #         # layers = nn.ModuleList()
-            #         # for k in range(i - j - 1):
-            #         #     layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** j),
-            #         #                                           kernel_size=3, stride=2, padding=1, bias=False),
-            #         #                                 nn.BatchNorm2d(max_disp // (2 ** j)),
-            #         #                                 nn.LeakyReLU(0.2, inplace=True),
-            #         #                                 ))
-            #         #
-            #         # layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
-            #         #                                       kernel_size=3, stride=2, padding=1, bias=False),
-            #         #                             nn.BatchNorm2d(max_disp // (2 ** i))))
-            #     else:
-            #         self.fuse_layers.append(None)
+            # elif i == 2:
+            #     for j in range(self.num_scales):
+            #         if j == 2:
+            #             # Identity
+            #             self.fuse_layers[-1].append(nn.Identity())
+            #         elif j == 1:
+            #             self.fuse_layers[-1].append(SimpleBAM_down(max_disp // (2 ** j)))
+            #         elif j == 0:
+            #             self.fuse_layers[-1].append(DoubleSimpleBAM_down(max_disp // (2 ** j)))
 
         self.relu = nn.LeakyReLU(0.2, inplace=True)
 
@@ -475,7 +456,7 @@ class AdaptiveAggregationModule(nn.Module):
         # for i in range(len(x_fused)):
         #     x_fused[i] = self.relu(x_fused[i])
         #
-        # return x_fused
+        # return x_fusion
 
 
 # Stacked AAModules
@@ -502,10 +483,8 @@ class AdaptiveAggregation(nn.Module):
 
             if i >= num_fusions - num_deform_blocks:
                 simple_bottleneck_module = False
-                simple_bam_module = False
             else:
                 simple_bottleneck_module = True
-                simple_bam_module = True
 
             fusions.append(AdaptiveAggregationModule(num_scales=self.num_scales,
                                                      num_output_branches=num_out_branches,
@@ -513,8 +492,7 @@ class AdaptiveAggregation(nn.Module):
                                                      num_blocks=num_stage_blocks,
                                                      mdconv_dilation=mdconv_dilation,
                                                      deformable_groups=deformable_groups,
-                                                     simple_bottleneck=simple_bottleneck_module,
-                                                     simple_bam=simple_bam_module))
+                                                     simple_bottleneck=simple_bottleneck_module))
 
         self.fusions = nn.Sequential(*fusions)
 
