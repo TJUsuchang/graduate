@@ -2,9 +2,23 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 
-class ChannelGate_up(nn.Module):
+class ChannelGate_up0(nn.Module):
     def __init__(self, in_planes):
-        super(ChannelGate_up, self).__init__()
+        super(ChannelGate_up0, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc1 = nn.Sequential(nn.Conv2d(in_planes, in_planes * 2, kernel_size=1, bias=False),
+                                 nn.BatchNorm2d(in_planes * 2),
+                                 nn.ReLU(inplace=True))
+
+    def forward(self, x):
+        a = self.avg_pool(x)
+        b = self.fc1(a)
+        chout = b
+        return chout
+
+class ChannelGate_up1(nn.Module):
+    def __init__(self, in_planes):
+        super(ChannelGate_up1, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc1 = nn.Sequential(nn.Conv2d(in_planes, in_planes * 2, kernel_size=1, bias=False),
                                  nn.BatchNorm2d(in_planes * 2),
@@ -30,9 +44,23 @@ class DoubleChannelGate_up(nn.Module):
         chout = b
         return chout
 
-class ChannelGate_down(nn.Module):
+class ChannelGate_down0(nn.Module):
     def __init__(self, in_planes):
-        super(ChannelGate_down, self).__init__()
+        super(ChannelGate_down0, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc1 = nn.Sequential(nn.Conv2d(in_planes, in_planes // 2, kernel_size=1, bias=False),
+                                 nn.BatchNorm2d(in_planes // 2),
+                                 nn.ReLU(inplace=True))
+
+    def forward(self, x):
+        a = self.avg_pool(x)
+        b = self.fc1(a)
+        chout = b
+        return chout
+
+class ChannelGate_down1(nn.Module):
+    def __init__(self, in_planes):
+        super(ChannelGate_down1, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc1 = nn.Sequential(nn.Conv2d(in_planes, in_planes // 2, kernel_size=1, bias=False),
                                  nn.BatchNorm2d(in_planes // 2),
@@ -58,18 +86,18 @@ class DoubleChannelGate_down(nn.Module):
         chout = b
         return chout
 
-class SpatialGate_up(nn.Module):
+class SimpleSpatialGate_up0(nn.Module):
     def __init__(self, in_planes, ratio=16):
-        super(SpatialGate_up, self).__init__()
+        super(SimpleSpatialGate_up0, self).__init__()
         self.fs1 = nn.Sequential(nn.Conv2d(in_planes, in_planes // ratio, kernel_size=1, bias=False),
                                  nn.BatchNorm2d(in_planes // ratio),
                                  nn.ReLU(inplace=True))
         self.fs2 = nn.Sequential(nn.ConvTranspose2d(in_planes//ratio, in_planes // ratio,
-                                                     kernel_size=3, stride=2, padding=4,
-                                                     output_padding=1, dilation=4, bias=False),
+                                                     kernel_size=3, stride=2, padding=1,
+                                                     output_padding=1, bias=False),
                                  nn.BatchNorm2d(in_planes // ratio),
                                  nn.ReLU(inplace=True))
-        self.fs3 = nn.Conv2d(in_planes // ratio, in_planes * 2, kernel_size=1)
+        self.fs3 = nn.Conv2d(in_planes // ratio, in_planes * 2, kernel_size=1, bias=False)
 
     def forward(self, x):
         a = self.fs1(x)
@@ -78,67 +106,9 @@ class SpatialGate_up(nn.Module):
         shout = c
         return shout
 
-class DoubleSpatialGate_up(nn.Module):
+class SimpleSpatialGate_up1(nn.Module):
     def __init__(self, in_planes, ratio=16):
-        super(DoubleSpatialGate_up, self).__init__()
-        self.fs1 = nn.Sequential(nn.Conv2d(in_planes, in_planes // ratio, kernel_size=1, bias=False),
-                                 nn.BatchNorm2d(in_planes // ratio),
-                                 nn.ReLU(inplace=True))
-        self.fs2 = nn.Sequential(nn.ConvTranspose2d(in_planes//ratio, in_planes // ratio,
-                                                     kernel_size=3, stride=2, padding=4,
-                                                     output_padding=1, dilation=4, bias=False),
-                                 nn.BatchNorm2d(in_planes // ratio),
-                                 nn.ReLU(inplace=True))
-        self.fs3 = nn.Conv2d(in_planes // ratio, in_planes * 4, kernel_size=1)
-
-    def forward(self, x):
-        a = self.fs1(x)
-        b = self.fs2(self.fs2(a))
-        c = self.fs3(b)
-        shout = c
-        return shout
-
-class SpatialGate_down(nn.Module):
-    def __init__(self, in_planes, ratio=16):
-        super(SpatialGate_down, self).__init__()
-        self.fs1 = nn.Sequential(nn.Conv2d(in_planes, in_planes // ratio, kernel_size=1, bias=False),
-                                 nn.BatchNorm2d(in_planes // ratio),
-                                 nn.ReLU(inplace=True))
-        self.fs2 = nn.Sequential(nn.Conv2d(in_planes//ratio, in_planes // ratio, kernel_size=3,
-                                           stride=2, padding=4, dilation=4, bias=False),
-                                 nn.BatchNorm2d(in_planes // ratio),
-                                 nn.ReLU(inplace=True))
-        self.fs3 = nn.Conv2d(in_planes // ratio, in_planes // 2, kernel_size=1)
-
-    def forward(self, x):
-        a = self.fs1(x)
-        b = self.fs2(a)
-        c = self.fs3(b)
-        shout = c
-        return shout
-
-class DoubleSpatialGate_down(nn.Module):
-    def __init__(self, in_planes, ratio=16):
-        super(DoubleSpatialGate_down, self).__init__()
-        self.fs1 = nn.Sequential(nn.Conv2d(in_planes, in_planes // ratio, kernel_size=1, bias=False),
-                                 nn.BatchNorm2d(in_planes // ratio),
-                                 nn.ReLU(inplace=True))
-        self.fs2 = nn.Sequential(nn.Conv2d(in_planes//ratio, in_planes // ratio, kernel_size=3,
-                                           stride=2, padding=4, dilation=4, bias=False),
-                                 nn.BatchNorm2d(in_planes // ratio),
-                                 nn.ReLU(inplace=True))
-        self.fs3 = nn.Conv2d(in_planes // ratio, in_planes // 4, kernel_size=1)
-
-    def forward(self, x):
-        a = self.fs1(x)
-        b = self.fs2(self.fs2(a))
-        c = self.fs3(b)
-        shout = c
-        return shout
-
-class SimpleSpatialGate_up(nn.Module):
-    def __init__(self, in_planes, ratio=16):
-        super(SimpleSpatialGate_up, self).__init__()
+        super(SimpleSpatialGate_up1, self).__init__()
         self.fs1 = nn.Sequential(nn.Conv2d(in_planes, in_planes // ratio, kernel_size=1, bias=False),
                                  nn.BatchNorm2d(in_planes // ratio),
                                  nn.ReLU(inplace=True))
@@ -167,18 +137,42 @@ class DoubleSimpleSpatialGate_up(nn.Module):
                                                      output_padding=1, bias=False),
                                  nn.BatchNorm2d(in_planes // ratio),
                                  nn.ReLU(inplace=True))
+        self.fs2_ = nn.Sequential(nn.ConvTranspose2d(in_planes//ratio, in_planes // ratio,
+                                                     kernel_size=3, stride=2, padding=1,
+                                                     output_padding=1, bias=False),
+                                 nn.BatchNorm2d(in_planes // ratio),
+                                 nn.ReLU(inplace=True))
         self.fs3 = nn.Conv2d(in_planes // ratio, in_planes * 4, kernel_size=1, bias=False)
 
     def forward(self, x):
         a = self.fs1(x)
-        b = self.fs2(self.fs2(a))
+        b = self.fs2_(self.fs2(a))
         c = self.fs3(b)
         shout = c
         return shout
 
-class SimpleSpatialGate_down(nn.Module):
+class SimpleSpatialGate_down0(nn.Module):
     def __init__(self, in_planes, ratio=16):
-        super(SimpleSpatialGate_down, self).__init__()
+        super(SimpleSpatialGate_down0, self).__init__()
+        self.fs1 = nn.Sequential(nn.Conv2d(in_planes, in_planes // ratio, kernel_size=1, bias=False),
+                                 nn.BatchNorm2d(in_planes // ratio),
+                                 nn.ReLU(inplace=True))
+        self.fs2 = nn.Sequential(nn.Conv2d(in_planes//ratio, in_planes // ratio, kernel_size=3,
+                                           stride=2, padding=1, bias=False),
+                                 nn.BatchNorm2d(in_planes // ratio),
+                                 nn.ReLU(inplace=True))
+        self.fs3 = nn.Conv2d(in_planes // ratio, in_planes // 2, kernel_size=1, bias=False)
+
+    def forward(self, x):
+        a = self.fs1(x)
+        b = self.fs2(a)
+        c = self.fs3(b)
+        shout = c
+        return shout
+
+class SimpleSpatialGate_down1(nn.Module):
+    def __init__(self, in_planes, ratio=16):
+        super(SimpleSpatialGate_down1, self).__init__()
         self.fs1 = nn.Sequential(nn.Conv2d(in_planes, in_planes // ratio, kernel_size=1, bias=False),
                                  nn.BatchNorm2d(in_planes // ratio),
                                  nn.ReLU(inplace=True))
@@ -205,20 +199,24 @@ class DoubleSimpleSpatialGate_down(nn.Module):
                                            stride=2, padding=1, bias=False),
                                  nn.BatchNorm2d(in_planes // ratio),
                                  nn.ReLU(inplace=True))
+        self.fs2_ = nn.Sequential(nn.Conv2d(in_planes//ratio, in_planes // ratio, kernel_size=3,
+                                           stride=2, padding=1, bias=False),
+                                 nn.BatchNorm2d(in_planes // ratio),
+                                 nn.ReLU(inplace=True))
         self.fs3 = nn.Conv2d(in_planes // ratio, in_planes // 4, kernel_size=1, bias=False)
 
     def forward(self, x):
         a = self.fs1(x)
-        b = self.fs2(self.fs2(a))
+        b = self.fs2_(self.fs2(a))
         c = self.fs3(b)
         shout = c
         return shout
 
-class BAM_up(nn.Module):
+class SimpleBAM_up0(nn.Module):
     def __init__(self, in_planes):
-        super(BAM_up, self).__init__()
-        self.channel_att = ChannelGate_up(in_planes)
-        self.spatial_att = SpatialGate_up(in_planes)
+        super(SimpleBAM_up0, self).__init__()
+        self.channel_att = ChannelGate_up0(in_planes)
+        self.spatial_att = SimpleSpatialGate_up0(in_planes)
         self.upsample = nn.Sequential(nn.ConvTranspose2d(in_planes, in_planes * 2, kernel_size=3,
                                                          stride=2, padding=1, output_padding=1,
                                                          bias=False),
@@ -236,84 +234,11 @@ class BAM_up(nn.Module):
         out = b
         return out
 
-class DoubleBAM_up(nn.Module):
+class SimpleBAM_up1(nn.Module):
     def __init__(self, in_planes):
-        super(DoubleBAM_up, self).__init__()
-        self.channel_att = DoubleChannelGate_up(in_planes)
-        self.spatial_att = DoubleSpatialGate_up(in_planes)
-        self.upsample = nn.Sequential(nn.ConvTranspose2d(in_planes, in_planes * 2, kernel_size=3,
-                                                         stride=2, padding=1, output_padding=1,
-                                                         bias=False),
-                                      nn.BatchNorm2d(in_planes * 2),
-                                      nn.ReLU(inplace=True))
-        self.upsample2 = nn.Sequential(nn.ConvTranspose2d(in_planes * 2, in_planes * 4, kernel_size=3,
-                                                         stride=2, padding=1, output_padding=1,
-                                                         bias=False),
-                                      nn.BatchNorm2d(in_planes * 4),
-                                      nn.ReLU(inplace=True))
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, x):
-        chout = self.channel_att(x)
-        shout = self.spatial_att(x)
-        up = self.upsample2(self.upsample(x))
-        att = self.sigmoid(chout * shout)
-        a = att * up
-        b = a + up
-        out = b
-        return out
-
-class BAM_down(nn.Module):
-    def __init__(self, in_planes):
-        super(BAM_down, self).__init__()
-        self.channel_att = ChannelGate_down(in_planes)
-        self.spatial_att = SpatialGate_down(in_planes)
-        self.downsample = nn.Sequential(nn.Conv2d(in_planes, in_planes // 2, kernel_size=3,
-                                                  stride=2, padding=1, bias=False),
-                                        nn.BatchNorm2d(in_planes // 2),
-                                        nn.ReLU(inplace=True))
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, x):
-        chout = self.channel_att(x)
-        shout = self.spatial_att(x)
-        down = self.downsample(x)
-        att = self.sigmoid(chout * shout)
-        a = att * down
-        b = a + down
-        out = b
-        return out
-
-class DoubleBAM_down(nn.Module):
-    def __init__(self, in_planes):
-        super(DoubleBAM_down, self).__init__()
-        self.channel_att = DoubleChannelGate_down(in_planes)
-        self.spatial_att = DoubleSpatialGate_down(in_planes)
-        self.downsample = nn.Sequential(nn.Conv2d(in_planes, in_planes // 2, kernel_size=3,
-                                                  stride=2, padding=1, bias=False),
-                                        nn.BatchNorm2d(in_planes // 2),
-                                        nn.ReLU(inplace=True))
-        self.downsample2 = nn.Sequential(nn.Conv2d(in_planes // 2, in_planes // 4, kernel_size=3,
-                                                  stride=2, padding=1, bias=False),
-                                        nn.BatchNorm2d(in_planes // 4),
-                                        nn.ReLU(inplace=True))
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, x):
-        chout = self.channel_att(x)
-        shout = self.spatial_att(x)
-        up = self.downsample2(self.downsample(x))
-        att = self.sigmoid(chout * shout)
-        a = att * up
-        b = a + up
-        out = b
-        return out
-
-class SimpleBAM_up(nn.Module):
-    def __init__(self, in_planes):
-        super(SimpleBAM_up, self).__init__()
-        self.channel_att = ChannelGate_up(in_planes)
-        self.spatial_att = SimpleSpatialGate_up(in_planes)
+        super(SimpleBAM_up1, self).__init__()
+        self.channel_att = ChannelGate_up1(in_planes)
+        self.spatial_att = SimpleSpatialGate_up1(in_planes)
         self.upsample = nn.Sequential(nn.ConvTranspose2d(in_planes, in_planes * 2, kernel_size=3,
                                                          stride=2, padding=1, output_padding=1,
                                                          bias=False),
@@ -358,11 +283,32 @@ class DoubleSimpleBAM_up(nn.Module):
         out = b
         return out
 
-class SimpleBAM_down(nn.Module):
+class SimpleBAM_down0(nn.Module):
     def __init__(self, in_planes):
-        super(SimpleBAM_down, self).__init__()
-        self.channel_att = ChannelGate_down(in_planes)
-        self.spatial_att = SimpleSpatialGate_down(in_planes)
+        super(SimpleBAM_down0, self).__init__()
+        self.channel_att = ChannelGate_down0(in_planes)
+        self.spatial_att = SimpleSpatialGate_down0(in_planes)
+        self.downsample = nn.Sequential(nn.Conv2d(in_planes, in_planes // 2, kernel_size=3,
+                                                  stride=2, padding=1, bias=False),
+                                        nn.BatchNorm2d(in_planes // 2),
+                                        nn.ReLU(inplace=True))
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        chout = self.channel_att(x)
+        shout = self.spatial_att(x)
+        down = self.downsample(x)
+        att = self.sigmoid(chout * shout)
+        a = att * down
+        b = a + down
+        out = b
+        return out
+
+class SimpleBAM_down1(nn.Module):
+    def __init__(self, in_planes):
+        super(SimpleBAM_down1, self).__init__()
+        self.channel_att = ChannelGate_down1(in_planes)
+        self.spatial_att = SimpleSpatialGate_down1(in_planes)
         self.downsample = nn.Sequential(nn.Conv2d(in_planes, in_planes // 2, kernel_size=3,
                                                   stride=2, padding=1, bias=False),
                                         nn.BatchNorm2d(in_planes // 2),
