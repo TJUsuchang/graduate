@@ -50,16 +50,20 @@ class Spatialatt_up1(nn.Module):
         self.fs1 = nn.Sequential(nn.Conv2d(in_planes, in_planes // ratio, kernel_size=1, bias=False),
                                  nn.BatchNorm2d(in_planes // ratio),
                                  nn.ReLU(inplace=True))
-        self.fs2 = nn.Sequential(nn.ConvTranspose2d(in_planes//ratio, in_planes // ratio,
-                                                     kernel_size=3, stride=2, padding=1,
-                                                     output_padding=1, bias=False),
-                                 nn.BatchNorm2d(in_planes // ratio),
-                                 nn.ReLU(inplace=True))
+        # self.fs2 = nn.Sequential(nn.ConvTranspose2d(in_planes//ratio, in_planes // ratio,
+        #                                              kernel_size=3, stride=2, padding=1,
+        #                                              output_padding=1, bias=False),
+        #                          nn.BatchNorm2d(in_planes // ratio),
+        #                          nn.ReLU(inplace=True))
         self.fs3 = nn.Conv2d(in_planes // ratio, in_planes * 2, kernel_size=1)
 
     def forward(self, x):
         a = self.fs1(x)
-        b = self.fs2(a)
+        if x.shape[3] == 96:
+            b = F.interpolate(a, size=(96, 192), mode='bilinear', align_corners=False)
+        elif x.shape[3] == 160:
+            b = F.interpolate(a, size=(192, 320), mode='bilinear', align_corners=False)
+        # b = self.fs2(a)
         c = self.fs3(b)
         shout = c
         return shout
@@ -70,16 +74,20 @@ class Spatialatt_up2(nn.Module):
         self.fs1 = nn.Sequential(nn.Conv2d(in_planes, in_planes // ratio, kernel_size=1, bias=False),
                                  nn.BatchNorm2d(in_planes // ratio),
                                  nn.ReLU(inplace=True))
-        self.fs2 = nn.Sequential(nn.ConvTranspose2d(in_planes//ratio, in_planes // ratio,
-                                                     kernel_size=3, stride=2, padding=1,
-                                                     output_padding=1, bias=False),
-                                 nn.BatchNorm2d(in_planes // ratio),
-                                 nn.ReLU(inplace=True))
+        # self.fs2 = nn.Sequential(nn.ConvTranspose2d(in_planes//ratio, in_planes // ratio,
+        #                                              kernel_size=3, stride=2, padding=1,
+        #                                              output_padding=1, bias=False),
+        #                          nn.BatchNorm2d(in_planes // ratio),
+        #                          nn.ReLU(inplace=True))
         self.fs3 = nn.Conv2d(in_planes // ratio, in_planes * 2, kernel_size=1)
 
     def forward(self, x):
         a = self.fs1(x)
-        b = self.fs2(a)
+        if x.shape[3] == 48:
+            b = F.interpolate(a, size=(48, 96), mode='bilinear', align_corners=False)
+        elif x.shape[3] == 80:
+            b = F.interpolate(a, size=(96, 160), mode='bilinear', align_corners=False)
+        # b = self.fs2(a)
         c = self.fs3(b)
         shout = c
         return shout
@@ -90,21 +98,25 @@ class DoubleSpatialatt_up(nn.Module):
         self.fs1 = nn.Sequential(nn.Conv2d(in_planes, in_planes // ratio, kernel_size=1, bias=False),
                                  nn.BatchNorm2d(in_planes // ratio),
                                  nn.ReLU(inplace=True))
-        self.fs2 = nn.Sequential(nn.ConvTranspose2d(in_planes//ratio, in_planes // ratio,
-                                                     kernel_size=3, stride=2, padding=1,
-                                                     output_padding=1, bias=False),
-                                 nn.BatchNorm2d(in_planes // ratio),
-                                 nn.ReLU(inplace=True))
-        self.fs2_ = nn.Sequential(nn.ConvTranspose2d(in_planes//ratio, in_planes // ratio,
-                                                     kernel_size=3, stride=2, padding=1,
-                                                     output_padding=1, bias=False),
-                                 nn.BatchNorm2d(in_planes // ratio),
-                                 nn.ReLU(inplace=True))
+        # self.fs2 = nn.Sequential(nn.ConvTranspose2d(in_planes//ratio, in_planes // ratio,
+        #                                              kernel_size=3, stride=2, padding=1,
+        #                                              output_padding=1, bias=False),
+        #                          nn.BatchNorm2d(in_planes // ratio),
+        #                          nn.ReLU(inplace=True))
+        # self.fs2_ = nn.Sequential(nn.ConvTranspose2d(in_planes//ratio, in_planes // ratio,
+        #                                              kernel_size=3, stride=2, padding=1,
+        #                                              output_padding=1, bias=False),
+        #                          nn.BatchNorm2d(in_planes // ratio),
+        #                          nn.ReLU(inplace=True))
         self.fs3 = nn.Conv2d(in_planes // ratio, in_planes * 4, kernel_size=1)
 
     def forward(self, x):
         a = self.fs1(x)
-        b = self.fs2_(self.fs2(a))
+        if x.shape[3] == 48:
+            b = F.interpolate(a, size=(96, 192), mode='bilinear', align_corners=False)
+        elif x.shape[3] == 80:
+            b = F.interpolate(a, size=(192, 320), mode='bilinear', align_corners=False)
+        # b = self.fs2_(self.fs2(a))
         c = self.fs3(b)
         shout = c
         return shout
