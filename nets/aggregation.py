@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from nets.deform import SimpleBottleneck, DeformSimpleBottleneck
-
+from nets.asff import ASFF
 
 def conv3d(in_channels, out_channels, kernel_size=3, stride=1, dilation=1, groups=1):
     return nn.Sequential(nn.Conv3d(in_channels, out_channels, kernel_size=kernel_size,
