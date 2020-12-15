@@ -50,7 +50,7 @@ class ASFF(nn.Module):
         self.weight_level_1 = add_conv(self.inter_dim, compress_c, 1, 1)
         self.weight_level_2 = add_conv(self.inter_dim, compress_c, 1, 1)
 
-        self.weight_levels = nn.Conv2d(compress_c*3, 3, kernel_size=1, stride=1, padding=0)
+        self.weight_levels = nn.Conv2d(compress_c * 3, 3, kernel_size=1, stride=1, padding=0)
         self.vis= vis
 
 
