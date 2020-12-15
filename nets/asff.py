@@ -64,14 +64,14 @@ class ASFF(nn.Module):
 
         elif self.level == 1:
             level_0_compressed = self.compress_level_0(x_level_0)
-            level_0_resized = F.interpolate(level_0_compressed, scale_factor=2, mode='nearest')
+            level_0_resized = F.interpolate(level_0_compressed, scale_factor=2, mode='bilinear', align_corners=False)
             level_1_resized = x_level_1
             level_2_resized = self.stride_level_2(x_level_2)
         elif self.level == 2:
             level_0_compressed = self.compress_level_0(x_level_0)
-            level_0_resized = F.interpolate(level_0_compressed, scale_factor=4, mode='nearest')
+            level_0_resized = F.interpolate(level_0_compressed, scale_factor=4, mode='bilinear', align_corners=False)
             level_1_compressed = self.compress_level_1(x_level_1)
-            level_1_resized = F.interpolate(level_1_compressed, scale_factor=2, mode='nearest')
+            level_1_resized = F.interpolate(level_1_compressed, scale_factor=2, mode='bilinear', align_corners=False)
             level_2_resized = x_level_2
 
         level_0_weight_v = self.weight_level_0(level_0_resized)
