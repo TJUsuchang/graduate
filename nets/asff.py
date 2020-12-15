@@ -34,14 +34,15 @@ class ASFF(nn.Module):
         if level == 0:
             self.stride_level_1 = add_conv(32, self.inter_dim, 3, 2)
             self.stride_level_2 = add_conv(64, self.inter_dim, 3, 2)
-            self.expand = add_conv(self.inter_dim, 32, 3, 1)
+            self.expand = add_conv(self.inter_dim, 16, 3, 1)
         elif level == 1:
             self.compress_level_0 = add_conv(16, self.inter_dim, 1, 1)
             self.stride_level_2 = add_conv(64, self.inter_dim, 3, 2)
-            self.expand = add_conv(self.inter_dim, 64, 3, 1)
+            self.expand = add_conv(self.inter_dim, 32, 3, 1)
         elif level == 2:
             self.compress_level_0 = add_conv(16, self.inter_dim, 1, 1)
-            self.expand = add_conv(self.inter_dim, 128, 3, 1)
+            self.compress_level_1 = add_conv(32, self.inter_dim, 1, 1)
+            self.expand = add_conv(self.inter_dim, 64, 3, 1)
 
         compress_c = 8 if rfb else 16  #when adding rfb, we use half number of channels to save memory
 
@@ -69,7 +70,8 @@ class ASFF(nn.Module):
         elif self.level == 2:
             level_0_compressed = self.compress_level_0(x_level_0)
             level_0_resized = F.interpolate(level_0_compressed, scale_factor=4, mode='nearest')
-            level_1_resized = F.interpolate(x_level_1, scale_factor=2, mode='nearest')
+            level_1_compressed = self.compress_level_1(x_level_1)
+            level_1_resized = F.interpolate(level_1_compressed, scale_factor=2, mode='nearest')
             level_2_resized = x_level_2
 
         level_0_weight_v = self.weight_level_0(level_0_resized)
