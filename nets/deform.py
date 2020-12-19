@@ -144,8 +144,6 @@ class SimpleBottleneck(nn.Module):
             norm_layer = nn.BatchNorm2d
         width = int(planes * (base_width / 64.)) * groups
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
-        self.conv1_ = nn.Sequential(nn.Conv2d(inplanes, inplanes // 2, 1),
-                                    nn.BatchNorm2d(inplanes // 2))
         self.conv1 = conv1x1(inplanes, width)
         self.bn1 = norm_layer(width)
         self.conv2 = conv3x3(width, width, stride, groups, dilation)
@@ -157,7 +155,7 @@ class SimpleBottleneck(nn.Module):
         self.stride = stride
 
     def forward(self, x):
-        identity = self.conv1_(x)
+        identity = x
 
         out = self.conv1(x)
         out = self.bn1(out)
@@ -194,8 +192,7 @@ class DeformSimpleBottleneck(nn.Module):
             norm_layer = nn.BatchNorm2d
         width = int(planes * (base_width / 64.)) * groups
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
-        self.conv1_ = nn.Sequential(nn.Conv2d(inplanes, inplanes // 2, 1),
-                                    nn.BatchNorm2d(inplanes // 2))
+
         self.conv1 = conv1x1(inplanes, width)
         self.bn1 = norm_layer(width)
         self.conv2 = DeformConv2d(width, width, stride=stride,
@@ -211,7 +208,7 @@ class DeformSimpleBottleneck(nn.Module):
         self.stride = stride
 
     def forward(self, x):
-        identity = self.conv1_(x)
+        identity = x
 
         out = self.conv1(x)
         out = self.bn1(out)

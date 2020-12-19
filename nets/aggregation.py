@@ -342,9 +342,9 @@ class AdaptiveAggregationModule(nn.Module):
                 self.w.append(W2(num_candidates))
             for j in range(num_blocks):
                 if simple_bottleneck:
-                    branch.append(SimpleBottleneck(num_candidates * 2, num_candidates))
+                    branch.append(SimpleBottleneck(num_candidates, num_candidates))
                 else:
-                    branch.append(DeformSimpleBottleneck(num_candidates * 2, num_candidates, modulation=True,
+                    branch.append(DeformSimpleBottleneck(num_candidates, num_candidates, modulation=True,
                                                          mdconv_dilation=mdconv_dilation,
                                                          deformable_groups=deformable_groups))
 
@@ -392,15 +392,15 @@ class AdaptiveAggregationModule(nn.Module):
             if i == 0:
                 a = self.h[0](x[0]) * x[0]
                 b = self.w[0](x[0]) * x[0]
-                preisa.append(torch.cat((a, b), dim=1))
+                preisa.append(torch.add(a, b))
             elif i == 1:
                 a = self.h[1](x[1]) * x[1]
                 b = self.w[1](x[1]) * x[1]
-                preisa.append(torch.cat((a, b), dim=1))
+                preisa.append(torch.add(a, b))
             elif i == 2:
                 a = self.h[2](x[2]) * x[2]
                 b = self.w[2](x[2]) * x[2]
-                preisa.append(torch.cat((a, b), dim=1))
+                preisa.append(torch.add(a, b))
             for j in range(self.num_blocks):
                 dconv = branch[j]
                 x[i] = dconv(preisa[i])
