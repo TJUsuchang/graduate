@@ -402,9 +402,12 @@ class AdaptiveAggregationModule(nn.Module):
                 for j in range(len(self.branches)):
                     x_fused.append(self.fuse_layers[i][j](x[j]))
 
-        x_fusion.append(x_fused[0] + x_fused[1] + x_fused[2])
-        x_fusion.append(x_fused[3] + x_fused[4] + x_fused[5])
-        x_fusion.append(x_fused[6] + x_fused[7] + x_fused[8])
+        if self.num_output_branches == 1:
+            x_fusion.append(x_fused[0] + x_fused[1] + x_fused[2])
+        else:
+            x_fusion.append(x_fused[0] + x_fused[1] + x_fused[2])
+            x_fusion.append(x_fused[3] + x_fused[4] + x_fused[5])
+            x_fusion.append(x_fused[6] + x_fused[7] + x_fused[8])
         for i in range(len(x_fusion)):
             x_fusion[i] = self.relu(x_fusion[i])
 
@@ -435,10 +438,8 @@ class AdaptiveAggregation(nn.Module):
 
             if i >= num_fusions - num_deform_blocks:
                 simple_bottleneck_module = False
-                simple_bam_module = False
             else:
                 simple_bottleneck_module = True
-                simple_bam_module = True
 
             fusions.append(AdaptiveAggregationModule(num_scales=self.num_scales,
                                                      num_output_branches=num_out_branches,
