@@ -387,19 +387,20 @@ class AdaptiveAggregationModule(nn.Module):
         assert len(self.branches) == len(x)
 
         # preisa = []
+        b = []
         for i in range(len(self.branches)):
             branch = self.branches[i]
             if i == 0:
                 # a = self.h[0](x[0]) * x[0]
-                b = self.w[0](x[0]) * x[0]
+                b.append(self.w[0](x[0]) * x[0])
                 # preisa.append(torch.cat((a, b), dim=1))
             elif i == 1:
                 # a = self.h[1](x[1]) * x[1]
-                b = self.w[1](x[1]) * x[1]
+                b.append(self.w[1](x[1]) * x[1])
                 # preisa.append(torch.cat((a, b), dim=1))
             elif i == 2:
                 # a = self.h[2](x[2]) * x[2]
-                b = self.w[2](x[2]) * x[2]
+                b.append(self.w[2](x[2]) * x[2])
                 # preisa.append(torch.cat((a, b), dim=1))
             for j in range(self.num_blocks):
                 dconv = branch[j]
