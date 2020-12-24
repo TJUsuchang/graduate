@@ -332,19 +332,19 @@ class AdaptiveAggregationModule(nn.Module):
             num_candidates = max_disp // (2 ** i)
             branch = nn.ModuleList()
             if i == 0:
-                self.h.append(H0(num_candidates))
+                # self.h.append(H0(num_candidates))
                 self.w.append(W0(num_candidates))
             elif i == 1:
-                self.h.append(H1(num_candidates))
+                # self.h.append(H1(num_candidates))
                 self.w.append(W1(num_candidates))
             elif i == 2:
-                self.h.append(H2(num_candidates))
+                # self.h.append(H2(num_candidates))
                 self.w.append(W2(num_candidates))
             for j in range(num_blocks):
                 if simple_bottleneck:
-                    branch.append(SimpleBottleneck(num_candidates * 2, num_candidates))
+                    branch.append(SimpleBottleneck(num_candidates, num_candidates))
                 else:
-                    branch.append(DeformSimpleBottleneck(num_candidates * 2, num_candidates, modulation=True,
+                    branch.append(DeformSimpleBottleneck(num_candidates, num_candidates, modulation=True,
                                                          mdconv_dilation=mdconv_dilation,
                                                          deformable_groups=deformable_groups))
 
@@ -386,24 +386,24 @@ class AdaptiveAggregationModule(nn.Module):
     def forward(self, x):
         assert len(self.branches) == len(x)
 
-        preisa = []
+        # preisa = []
         for i in range(len(self.branches)):
             branch = self.branches[i]
             if i == 0:
-                a = self.h[0](x[0]) * x[0]
+                # a = self.h[0](x[0]) * x[0]
                 b = self.w[0](x[0]) * x[0]
-                preisa.append(torch.cat((a, b), dim=1))
+                # preisa.append(torch.cat((a, b), dim=1))
             elif i == 1:
-                a = self.h[1](x[1]) * x[1]
+                # a = self.h[1](x[1]) * x[1]
                 b = self.w[1](x[1]) * x[1]
-                preisa.append(torch.cat((a, b), dim=1))
+                # preisa.append(torch.cat((a, b), dim=1))
             elif i == 2:
-                a = self.h[2](x[2]) * x[2]
+                # a = self.h[2](x[2]) * x[2]
                 b = self.w[2](x[2]) * x[2]
-                preisa.append(torch.cat((a, b), dim=1))
+                # preisa.append(torch.cat((a, b), dim=1))
             for j in range(self.num_blocks):
                 dconv = branch[j]
-                x[i] = dconv(preisa[i])
+                x[i] = dconv(b[i])
 
         if self.num_scales == 1:  # without fusions
             return x
