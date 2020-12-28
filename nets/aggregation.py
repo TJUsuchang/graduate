@@ -345,7 +345,7 @@ class AdaptiveAggregationModule(nn.Module):
         # For each output branch
         self.csa = nn.ModuleList()
         for i in range(self.num_output_branches):
-            self.csa.append(ASFF(level=(2-i), rfb=True))
+            self.csa.append(ASFF(level=(2-i)))
 
         self.relu = nn.LeakyReLU(0.2, inplace=True)
 
