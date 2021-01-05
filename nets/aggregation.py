@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import utils as vutils
+from utils import utils
 
 from nets.deform import SimpleBottleneck, DeformSimpleBottleneck
 from nets.hw import *
@@ -382,6 +384,7 @@ class AdaptiveAggregationModule(nn.Module):
                     self.fuse_layers[-1].append(nn.Sequential(*layers))
 
         self.relu = nn.LeakyReLU(0.2, inplace=True)
+        self.convaa = nn.Conv2d(64, 1, 1, 1)
 
     def forward(self, x):
         assert len(self.branches) == len(x)
@@ -393,6 +396,16 @@ class AdaptiveAggregationModule(nn.Module):
                 a = self.h[0](x[0]) * x[0]
                 b = self.w[0](x[0]) * x[0]
                 preisa.append(torch.cat((a, b), dim=1))
+                save_name = '/home/vpalyz/sc/vis/hw/'
+                a_ = self.convaa(self.h[0](x[0]))
+                b_ = self.convaa(self.h[0](x[0]))
+                a__ = self.convaa(a)
+                x[0] = self.convaa(x[0])
+                vutils.save_image(x[0], save_name + '1.png')
+                vutils.save_image(a_, save_name + '11.png')
+                vutils.save_image(b_, save_name + '12.png')
+                vutils.save_image(a__, save_name + '111.png')
+                print('done!')
             elif i == 1:
                 a = self.h[1](x[1]) * x[1]
                 b = self.w[1](x[1]) * x[1]

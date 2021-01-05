@@ -149,3 +149,13 @@ def get_logger():
     handler.setFormatter(logging.Formatter(fmt))
     logger.addHandler(handler)
     return logger
+
+def denorm(img):
+    # img.shape = [B, 3, H, W]
+    meta = dict(dtype=img.dtype, device=img.device)
+    IMAGENET_MEAN = [0.485, 0.456, 0.406]
+    IMAGENET_STD = [0.229, 0.224, 0.225]
+    mean = torch.tensor(IMAGENET_MEAN, **meta).reshape(3, 1, 1)
+    std = torch.tensor(IMAGENET_STD, **meta).reshape(3, 1, 1)
+    img_out = img * std + mean
+    return img_out
