@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import utils as vutils
+from utils import utils
 
 def add_conv(in_ch, out_ch, ksize, stride, leaky=True):
     """
@@ -55,6 +57,7 @@ class ASFF(nn.Module):
                                     nn.Sigmoid())
 
         self.vis = vis
+        # self.convaa = add_conv(64, 1, 1, 1)
 
 
     def forward(self, x_level_0, x_level_1, x_level_2):
@@ -85,6 +88,16 @@ class ASFF(nn.Module):
         levels_weight_v = torch.cat((level_0_weight_v, level_1_weight_v, level_2_weight_v), 1)
         levels_weight = F.softmax(levels_weight_v, dim=1)
 
+        # save_name = '/home/vpalyz/sc/vis/weight/'
+        # level_0_resized_ = self.convaa(level_0_resized)
+        # level_1_resized_ = self.convaa(level_1_resized)
+        # level_2_resized_ = self.convaa(level_2_resized)
+        # vutils.save_image(level_0_resized_, save_name + '11.png')
+        # vutils.save_image(level_1_resized_, save_name + '22.png')
+        # vutils.save_image(level_2_resized_, save_name + '33.png')
+        # vutils.save_image(levels_weight[:, 0:1, :, :], save_name + 'weight11.png')
+        # vutils.save_image(levels_weight[:, 1:2, :, :], save_name + 'weight22.png')
+        # vutils.save_image(levels_weight[:, 2:, :, :], save_name + 'weight33.png')
         fused_out_reduced = level_0_resized * levels_weight[:, 0:1, :, :] + \
                             level_1_resized * levels_weight[:, 1:2, :, :] + \
                             level_2_resized * levels_weight[:, 2:, :, :]
