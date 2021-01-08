@@ -397,21 +397,22 @@ class AdaptiveAggregationModule(nn.Module):
                 a = self.h[0](x[0]) * x[0]
                 b = self.w[0](x[0]) * x[0]
                 preisa.append(torch.cat((a, b), dim=1))
-                # save_name = '/home/vpalyz/sc/vis/hw/'
+                # save_name = '/home/vpalyz/sc/vis/hw_vis/'
                 # c = torch.cat((a, b), dim=1)
-                # a_ = self.convaa(self.h[0](x[0]))
-                # b_ = self.convaa(self.w[0](x[0]))
+                # # a_ = self.convaa(self.h[0](x[0]))
+                # # b_ = self.convaa(self.w[0](x[0]))
                 # a__ = self.convaa(a)
                 # b__ = self.convaa(b)
                 # c_ = self.convcc(c)
                 # x[0] = self.convaa(x[0])
-                # vutils.save_image(x[0], save_name + '1.png')
-                # vutils.save_image(a_, save_name + '11.png')
-                # vutils.save_image(b_, save_name + '12.png')
-                # vutils.save_image(a__, save_name + '111.png')
-                # vutils.save_image(b__, save_name + '122.png')
-                # vutils.save_image(c_, save_name + '13.png')
-                # print('done!')
+                # vutils.save_image(x[0], save_name + f"{i:06d}" + 'x.png')
+                # # vutils.save_image(a_, save_name + '11.png')
+                # # vutils.save_image(b_, save_name + '12.png')
+                # vutils.save_image(a__, save_name + f"{i:06d}" + 'h.png')
+                # vutils.save_image(b__, save_name + f"{i:06d}" + 'w.png')
+                # vutils.save_image(c_, save_name + f"{i:06d}" + 'hw.png')
+                # # vutils.save_image(c_ * 5, save_name + f"{i:06d}" + 'E.png')
+                # # print('done!')
             elif i == 1:
                 a = self.h[1](x[1]) * x[1]
                 b = self.w[1](x[1]) * x[1]
