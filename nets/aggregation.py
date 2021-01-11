@@ -384,8 +384,8 @@ class AdaptiveAggregationModule(nn.Module):
                     self.fuse_layers[-1].append(nn.Sequential(*layers))
 
         self.relu = nn.LeakyReLU(0.2, inplace=True)
-        self.convaa = nn.Conv2d(64, 1, 1, 1)
-        self.convcc = nn.Conv2d(128, 1, 1, 1)
+        # self.convaa = nn.Conv2d(64, 1, 1, 1)
+        # self.convcc = nn.Conv2d(128, 1, 1, 1)
 
     def forward(self, x):
         assert len(self.branches) == len(x)

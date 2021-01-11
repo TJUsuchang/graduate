@@ -3,7 +3,7 @@ import time
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn.functional as F
 import os
-
+from torchvision import utils as  vutils
 from utils import utils
 from utils.visualization import disp_error_img, save_images
 from metric import d1_metric, thres_metric
@@ -255,6 +255,12 @@ class Model(object):
                                           mode='bilinear', align_corners=False) * (gt_disp.size(-1) / pred_disp.size(-1))
                 pred_disp = pred_disp.squeeze(1)  # [B, H, W]
 
+            save_name = '/home/vpalyz/sc/vis/finalpass/hw-isa/'
+            vutils.save_image(utils.denorm(left), save_name + 'left/' + f"{i:06d}" + '_left.png')
+            vutils.save_image(utils.denorm(right), save_name + 'right/' + f"{i:06d}" + '_right.png')
+            vutils.save_image(gt_disp / args.max_disp, save_name + 'gt/' + f"{i:06d}" + '_gt.png')
+            vutils.save_image(pred_disp / args.max_disp, save_name + 'pred/' + f"{i:06d}" + '_pred.png')
+            vutils.save_image((gt_disp - pred_disp).abs() / 50, save_name + 'error/' + f"{i:06d}" + '_error.png')
             epe = F.l1_loss(gt_disp[mask], pred_disp[mask], reduction='mean')
             d1 = d1_metric(pred_disp, gt_disp, mask)
             thres1 = thres_metric(pred_disp, gt_disp, mask, 1.0)
