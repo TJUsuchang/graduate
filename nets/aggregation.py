@@ -386,15 +386,21 @@ class AdaptiveAggregationModule(nn.Module):
 
         x_fused = []
         for i in range(len(self.fuse_layers)):
-            for j in range(len(self.branches)):
-                if j == 0:
-                    x_fused.append(self.fuse_layers[i][0](x[0]))
-                else:
-                    exchange = self.fuse_layers[i][j](x[j])
-                    if exchange.size()[2:] != x_fused[i].size()[2:]:
-                        exchange = F.interpolate(exchange, size=x_fused[i].size()[2:],
-                                                 mode='bilinear', align_corners=False)
-                    x_fused[i] = x_fused[i] + exchange
+            if i == 0:
+                x_fused.append(nn.Identity())
+            elif i == 1:
+                exchange = F.interpolate(x_fused[-1], scale_factor=2,
+                                         mode='bilinear', align_corners=False)
+                x_fused.append()
+        #     for j in range(len(self.branches)):
+        #         if j == 0:
+        #             x_fused.append(self.fuse_layers[i][0](x[0]))
+        #         else:
+        #             exchange = self.fuse_layers[i][j](x[j])
+        #             if exchange.size()[2:] != x_fused[i].size()[2:]:
+        #                 exchange = F.interpolate(exchange, size=x_fused[i].size()[2:],
+        #                                          mode='bilinear', align_corners=False)
+        #             x_fused[i] = x_fused[i] + exchange
 
         for i in range(len(x_fused)):
             x_fused[i] = self.relu(x_fused[i])
