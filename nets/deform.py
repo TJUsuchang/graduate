@@ -1,5 +1,5 @@
 import torch.nn as nn
-
+import torch
 from nets.deform_conv import DeformConv, ModulatedDeformConv
 
 
@@ -12,7 +12,6 @@ def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
 def conv1x1(in_planes, out_planes, stride=1):
     """1x1 convolution"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
-
 
 class DeformConv2d(nn.Module):
     """A single (modulated) deformable conv layer"""
@@ -176,6 +175,108 @@ class SimpleBottleneck(nn.Module):
 
         return out
 
+class SimpleattenBottleneck(nn.Module):
+    """Simple bottleneck block without channel expansion"""
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
+                 base_width=64, dilation=1, norm_layer=None):
+        super(SimpleattenBottleneck, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        width = int(planes * (base_width / 64.)) * groups
+        # Both self.conv2 and self.downsample layers downsample the input when stride != 1
+        self.conv1 = conv1x1(inplanes, width)
+        self.bn1 = norm_layer(width)
+        self.conv2 = conv3x3(width, width, stride, groups, dilation)
+        self.bn2 = norm_layer(width)
+        self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        identity = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        max_out = torch.mean(out, dim=1, keepdim=True)
+        max_out = self.sigmoid(max_out)
+        out = max_out * x
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = self.relu(out)
+
+        return out
+
+class DeformattenSimpleBottleneck(nn.Module):
+    """Used for cost aggregation"""
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
+                 base_width=64, norm_layer=None,
+                 mdconv_dilation=2,
+                 deformable_groups=2,
+                 modulation=True,
+                 double_mask=True,
+                 ):
+        super(DeformattenSimpleBottleneck, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        width = int(planes * (base_width / 64.)) * groups
+        # Both self.conv2 and self.downsample layers downsample the input when stride != 1
+        self.conv1 = conv1x1(inplanes, width)
+        self.bn1 = norm_layer(width)
+        self.conv2 = DeformConv2d(width, width // 4, stride=stride,
+                                  dilation=mdconv_dilation,
+                                  deformable_groups=deformable_groups,
+                                  modulation=modulation,
+                                  double_mask=double_mask)
+        self.bn2 = norm_layer(width // 4)
+        self.conv2_ = DeformConv2d(width // 4, width // 16, stride=stride,
+                                  dilation=mdconv_dilation,
+                                  deformable_groups=deformable_groups,
+                                  modulation=modulation,
+                                  double_mask=double_mask)
+        self.bn2_ = norm_layer(width // 16)
+        self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        identity = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv2_(out)
+        out = self.bn2_(out)
+        out = self.relu(out)
+
+        max_out = torch.mean(out, dim=1, keepdim=True)
+        max_out = self.sigmoid(max_out)
+        out = max_out * x
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = self.relu(out)
+
+        return out
 
 class DeformSimpleBottleneck(nn.Module):
     """Used for cost aggregation"""

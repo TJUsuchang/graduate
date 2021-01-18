@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from nets.deform import SimpleBottleneck, DeformSimpleBottleneck
+# from nets.deform import SimpleBottleneck, DeformSimpleBottleneck
+from nets.deform import *
 
 
 def conv3d(in_channels, out_channels, kernel_size=3, stride=1, dilation=1, groups=1):
@@ -331,9 +332,9 @@ class AdaptiveAggregationModule(nn.Module):
             branch = nn.ModuleList()
             for j in range(num_blocks):
                 if simple_bottleneck:
-                    branch.append(SimpleBottleneck(num_candidates, num_candidates))
+                    branch.append(SimpleattenBottleneck(num_candidates, num_candidates))
                 else:
-                    branch.append(DeformSimpleBottleneck(num_candidates, num_candidates, modulation=True,
+                    branch.append(DeformattenSimpleBottleneck(num_candidates, num_candidates, modulation=True,
                                                          mdconv_dilation=mdconv_dilation,
                                                          deformable_groups=deformable_groups))
 
