@@ -350,13 +350,13 @@ class AdaptiveAggregationModule(nn.Module):
             elif i == 1:
                 self.fuse_layers.append(globalpoolatten5())
                 self.convb.append(nn.Sequential(nn.Conv2d(32, 64, kernel_size=1, bias=False),
-                                   nn.BatchNorm2d(64),
-                                   nn.LeakyReLU(0.2, inplace=True)))
+                                  nn.BatchNorm2d(64),
+                                  nn.LeakyReLU(0.2, inplace=True)))
             elif i == 2:
                 self.fuse_layers.append(globalpoolatten3())
                 self.conva.append(nn.Sequential(nn.Conv2d(16, 32, kernel_size=1, bias=False),
-                                   nn.BatchNorm2d(32),
-                                   nn.LeakyReLU(0.2, inplace=True)))
+                                  nn.BatchNorm2d(32),
+                                  nn.LeakyReLU(0.2, inplace=True)))
         # for i in range(self.num_output_branches):
         #     self.fuse_layers.append(nn.ModuleList())
         #     # For each branch (different scale)
