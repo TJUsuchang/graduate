@@ -344,32 +344,45 @@ class AdaptiveAggregationModule(nn.Module):
 
         # Adaptive cross-scale aggregation
         # For each output branch
-        for i in range(self.num_output_branches):
-            self.fuse_layers.append(nn.ModuleList())
-            # For each branch (different scale)
-            for j in range(self.num_scales):
-                if i == j:
-                    # Identity
-                    self.fuse_layers[-1].append(nn.Identity())
-                elif i < j:
-                    self.fuse_layers[-1].append(
-                        nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
-                                                kernel_size=1, bias=False),
-                                      nn.BatchNorm2d(max_disp // (2 ** i)),
-                                      ))
-                elif i > j:
-                    layers = nn.ModuleList()
-                    for k in range(i - j - 1):
-                        layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** j),
-                                                              kernel_size=3, stride=2, padding=1, bias=False),
-                                                    nn.BatchNorm2d(max_disp // (2 ** j)),
-                                                    nn.LeakyReLU(0.2, inplace=True),
-                                                    ))
-
-                    layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
-                                                          kernel_size=3, stride=2, padding=1, bias=False),
-                                                nn.BatchNorm2d(max_disp // (2 ** i))))
-                    self.fuse_layers[-1].append(nn.Sequential(*layers))
+        for i in range(self.num_scales):
+            if i == 0:
+                self.fuse_layers.append(globalpoolatten7())
+            elif i == 1:
+                self.fuse_layers.append(globalpoolatten5())
+            elif i == 2:
+                self.fuse_layers.append(globalpoolatten3())
+        # for i in range(self.num_output_branches):
+        #     self.fuse_layers.append(nn.ModuleList())
+        #     # For each branch (different scale)
+        #     for j in range(self.num_scales):
+        #         if i == j:
+        #             # Identity
+        #             self.fuse_layers[-1].append(nn.Identity())
+        #         elif i < j:
+        #             self.fuse_layers[-1].append(
+        #                 nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
+        #                                         kernel_size=1, bias=False),
+        #                               nn.BatchNorm2d(max_disp // (2 ** i)),
+        #                               ))
+        #         elif i > j:
+        #             layers = nn.ModuleList()
+        #             for k in range(i - j - 1):
+        #                 layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** j),
+        #                                                       kernel_size=3, stride=2, padding=1, bias=False),
+        #                                             nn.BatchNorm2d(max_disp // (2 ** j)),
+        #                                             nn.LeakyReLU(0.2, inplace=True),
+        #                                             ))
+        #
+        #             layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
+        #                                                   kernel_size=3, stride=2, padding=1, bias=False),
+        #                                         nn.BatchNorm2d(max_disp // (2 ** i))))
+        #             self.fuse_layers[-1].append(nn.Sequential(*layers))
+        self.conva = nn.Sequential(nn.Conv2d(16, 32, kernel_size=1, bias=False),
+                                   nn.BatchNorm2d(32),
+                                   nn.LeakyReLU(0.2, inplace=True))
+        self.convb = nn.Sequential(nn.Conv2d(32, 64, kernel_size=1, bias=False),
+                                   nn.BatchNorm2d(64),
+                                   nn.LeakyReLU(0.2, inplace=True))
 
         self.relu = nn.LeakyReLU(0.2, inplace=True)
 
