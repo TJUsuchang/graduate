@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from nets.deform import SimpleBottleneck, DeformSimpleBottleneck
-
+# from nets.deform import SimpleBottleneck, DeformSimpleBottleneck
+from nets.deform import *
 
 def conv3d(in_channels, out_channels, kernel_size=3, stride=1, dilation=1, groups=1):
     return nn.Sequential(nn.Conv3d(in_channels, out_channels, kernel_size=kernel_size,
@@ -343,33 +343,45 @@ class AdaptiveAggregationModule(nn.Module):
 
         # Adaptive cross-scale aggregation
         # For each output branch
-        for i in range(self.num_output_branches):
-            self.fuse_layers.append(nn.ModuleList())
-            # For each branch (different scale)
-            for j in range(self.num_scales):
-                if i == j:
-                    # Identity
-                    self.fuse_layers[-1].append(nn.Identity())
-                elif i < j:
-                    self.fuse_layers[-1].append(
-                        nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
-                                                kernel_size=1, bias=False),
-                                      nn.BatchNorm2d(max_disp // (2 ** i)),
-                                      ))
-                elif i > j:
-                    layers = nn.ModuleList()
-                    for k in range(i - j - 1):
-                        layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** j),
-                                                              kernel_size=3, stride=2, padding=1, bias=False),
-                                                    nn.BatchNorm2d(max_disp // (2 ** j)),
-                                                    nn.LeakyReLU(0.2, inplace=True),
-                                                    ))
-
-                    layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
-                                                          kernel_size=3, stride=2, padding=1, bias=False),
-                                                nn.BatchNorm2d(max_disp // (2 ** i))))
-                    self.fuse_layers[-1].append(nn.Sequential(*layers))
-
+        for i in range(self.num_scales):
+            if i == 0:
+                self.fuse_layers.append(globalpoolatten7())
+            elif i == 1:
+                self.fuse_layers.append(globalpoolatten5())
+            elif i == 2:
+                self.fuse_layers.append(globalpoolatten3())
+        # for i in range(self.num_output_branches):
+        #     self.fuse_layers.append(nn.ModuleList())
+        #     # For each branch (different scale)
+        #     for j in range(self.num_scales):
+        #         if i == j:
+        #             # Identity
+        #             self.fuse_layers[-1].append(nn.Identity())
+        #         elif i < j:
+        #             self.fuse_layers[-1].append(
+        #                 nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
+        #                                         kernel_size=1, bias=False),
+        #                               nn.BatchNorm2d(max_disp // (2 ** i)),
+        #                               ))
+        #         elif i > j:
+        #             layers = nn.ModuleList()
+        #             for k in range(i - j - 1):
+        #                 layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** j),
+        #                                                       kernel_size=3, stride=2, padding=1, bias=False),
+        #                                             nn.BatchNorm2d(max_disp // (2 ** j)),
+        #                                             nn.LeakyReLU(0.2, inplace=True),
+        #                                             ))
+        #
+        #             layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
+        #                                                   kernel_size=3, stride=2, padding=1, bias=False),
+        #                                         nn.BatchNorm2d(max_disp // (2 ** i))))
+        #             self.fuse_layers[-1].append(nn.Sequential(*layers))
+        self.conva = nn.Sequential(nn.Conv2d(16, 32, kernel_size=1, bias=False),
+                                   nn.BatchNorm2d(32),
+                                   nn.LeakyReLU(0.2, inplace=True))
+        self.convb = nn.Sequential(nn.Conv2d(32, 64, kernel_size=1, bias=False),
+                                   nn.BatchNorm2d(64),
+                                   nn.LeakyReLU(0.2, inplace=True))
         self.relu = nn.LeakyReLU(0.2, inplace=True)
 
     def forward(self, x):
@@ -384,14 +396,25 @@ class AdaptiveAggregationModule(nn.Module):
         if self.num_scales == 1:  # without fusions
             return x
 
+        x_atten = []
         x_fused = []
-        for i in range(len(self.fuse_layers)):
-            if i == 0:
-                x_fused.append(nn.Identity())
+        for i in range(2, -1, -1):
+            if i == 2:
+                x_atten.append(self.fuse_layers[i](x[i]))
+                x_fused.append(x_atten[-1] * x[i])
             elif i == 1:
                 exchange = F.interpolate(x_fused[-1], scale_factor=2,
-                                         mode='bilinear', align_corners=False)
-                x_fused.append()
+                                     mode='bilinear', align_corners=False)
+                exchange = self.conva(exchange)
+                x_atten.append(self.fuse_layers[i](x[i]))
+                x_fused.append(x_atten[-1] * x[i] + exchange)
+            elif i == 0:
+                exchange = F.interpolate(x_fused[-1], scale_factor=2,
+                                     mode='bilinear', align_corners=False)
+                exchange = self.convb(exchange)
+                x_atten.append(self.fuse_layers[i](x[i]))
+                x_fused.append(x_atten[-1] * x[i] + exchange)
+        x_fused = x_fused[::-1]
         #     for j in range(len(self.branches)):
         #         if j == 0:
         #             x_fused.append(self.fuse_layers[i][0](x[0]))
