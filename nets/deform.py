@@ -11,9 +11,10 @@ class globalpoolatten3(nn.Module):
     def forward(self, x):
         avg_out = torch.mean(x, dim=1, keepdim=True)
         max_out, _ = torch.max(x, dim=1, keepdim=True)
-        x = torch.cat([avg_out, max_out], dim=1)
-        x = self.conv1(x)
-        return self.sigmoid(x)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        atten = self.conv1(cat)
+        out = self.sigmoid(atten) * x
+        return out
 
 class globalpoolatten5(nn.Module):
     def __init__(self):
@@ -24,9 +25,10 @@ class globalpoolatten5(nn.Module):
     def forward(self, x):
         avg_out = torch.mean(x, dim=1, keepdim=True)
         max_out, _ = torch.max(x, dim=1, keepdim=True)
-        x = torch.cat([avg_out, max_out], dim=1)
-        x = self.conv1(x)
-        return self.sigmoid(x)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        atten = self.conv1(cat)
+        out = self.sigmoid(atten) * x
+        return out
 
 class globalpoolatten7(nn.Module):
     def __init__(self):
@@ -37,9 +39,10 @@ class globalpoolatten7(nn.Module):
     def forward(self, x):
         avg_out = torch.mean(x, dim=1, keepdim=True)
         max_out, _ = torch.max(x, dim=1, keepdim=True)
-        x = torch.cat([avg_out, max_out], dim=1)
-        x = self.conv1(x)
-        return self.sigmoid(x)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        atten = self.conv1(cat)
+        out = self.sigmoid(atten) * x
+        return out
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
     """3x3 convolution with padding"""
