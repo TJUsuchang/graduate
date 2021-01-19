@@ -205,7 +205,7 @@ class SimpleattenBottleneck(nn.Module):
         out = self.bn2(out)
         out = self.relu(out)
 
-        max_out = torch.mean(out, dim=1, keepdim=True)
+        max_out, _ = torch.max(out, dim=1, keepdim=True)
         max_out = self.sigmoid(max_out)
         out = max_out * x
 
@@ -266,9 +266,9 @@ class DeformattenSimpleBottleneck(nn.Module):
         out = self.bn2_(out)
         out = self.relu(out)
 
-        max_out = torch.mean(out, dim=1, keepdim=True)
-        max_out = self.sigmoid(max_out)
-        out = max_out * x
+        mean_out = torch.mean(out, dim=1, keepdim=True)
+        mean_out = self.sigmoid(mean_out)
+        out = mean_out * x
 
         if self.downsample is not None:
             identity = self.downsample(x)
