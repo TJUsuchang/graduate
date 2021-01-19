@@ -22,9 +22,10 @@ class globalpoolatten3(nn.Module):
     def forward(self, x):
         avg_out = torch.mean(x, dim=1, keepdim=True)
         max_out, _ = torch.max(x, dim=1, keepdim=True)
-        x = torch.cat([avg_out, max_out], dim=1)
-        x = self.conv1(x)
-        return self.sigmoid(x)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        atten = self.conv1(cat)
+        out = self.sigmoid(atten) * x
+        return out
 
 class globalpoolatten5(nn.Module):
     def __init__(self):
@@ -35,9 +36,10 @@ class globalpoolatten5(nn.Module):
     def forward(self, x):
         avg_out = torch.mean(x, dim=1, keepdim=True)
         max_out, _ = torch.max(x, dim=1, keepdim=True)
-        x = torch.cat([avg_out, max_out], dim=1)
-        x = self.conv1(x)
-        return self.sigmoid(x)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        atten = self.conv1(cat)
+        out = self.sigmoid(atten) * x
+        return out
 
 class globalpoolatten7(nn.Module):
     def __init__(self):
@@ -48,9 +50,10 @@ class globalpoolatten7(nn.Module):
     def forward(self, x):
         avg_out = torch.mean(x, dim=1, keepdim=True)
         max_out, _ = torch.max(x, dim=1, keepdim=True)
-        x = torch.cat([avg_out, max_out], dim=1)
-        x = self.conv1(x)
-        return self.sigmoid(x)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        atten = self.conv1(cat)
+        out = self.sigmoid(atten) * x
+        return out
 
 class DeformConv2d(nn.Module):
     """A single (modulated) deformable conv layer"""
@@ -244,7 +247,7 @@ class SimpleattenBottleneck(nn.Module):
         out = self.bn2(out)
         out = self.relu(out)
 
-        max_out = torch.mean(out, dim=1, keepdim=True)
+        max_out, _ = torch.max(out, dim=1, keepdim=True)
         max_out = self.sigmoid(max_out)
         out = max_out * x
 
@@ -305,9 +308,9 @@ class DeformattenSimpleBottleneck(nn.Module):
         out = self.bn2_(out)
         out = self.relu(out)
 
-        max_out = torch.mean(out, dim=1, keepdim=True)
-        max_out = self.sigmoid(max_out)
-        out = max_out * x
+        mean_out = torch.mean(out, dim=1, keepdim=True)
+        mean_out = self.sigmoid(mean_out)
+        out = mean_out * x
 
         if self.downsample is not None:
             identity = self.downsample(x)
