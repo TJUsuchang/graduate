@@ -217,59 +217,17 @@ class SimpleBottleneck(nn.Module):
 
         return out
 
-class SimpleattenBottleneck(nn.Module):
-    """Simple bottleneck block without channel expansion"""
-
-    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
-                 base_width=64, dilation=1, norm_layer=None):
-        super(SimpleattenBottleneck, self).__init__()
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-        width = int(planes * (base_width / 64.)) * groups
-        # Both self.conv2 and self.downsample layers downsample the input when stride != 1
-        self.conv1 = conv1x1(inplanes, width)
-        self.bn1 = norm_layer(width)
-        self.conv2 = conv3x3(width, width, stride, groups, dilation)
-        self.bn2 = norm_layer(width)
-        self.relu = nn.ReLU(inplace=True)
-        self.sigmoid = nn.Sigmoid()
-        self.downsample = downsample
-        self.stride = stride
-
-    def forward(self, x):
-        identity = x
-
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
-
-        out = self.conv2(out)
-        out = self.bn2(out)
-        out = self.relu(out)
-
-        max_out, _ = torch.max(out, dim=1, keepdim=True)
-        max_out = self.sigmoid(max_out)
-        out = max_out * x
-
-        if self.downsample is not None:
-            identity = self.downsample(x)
-
-        out += identity
-        out = self.relu(out)
-
-        return out
-
-class DeformattenSimpleBottleneck(nn.Module):
+class DeformattenSimpleBottleneck0(nn.Module):
     """Used for cost aggregation"""
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
                  base_width=64, norm_layer=None,
-                 mdconv_dilation=2,
+                 mdconv_dilation=5,
                  deformable_groups=2,
                  modulation=True,
                  double_mask=True,
                  ):
-        super(DeformattenSimpleBottleneck, self).__init__()
+        super(DeformattenSimpleBottleneck0, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         width = int(planes * (base_width / 64.)) * groups
@@ -288,6 +246,8 @@ class DeformattenSimpleBottleneck(nn.Module):
                                   modulation=modulation,
                                   double_mask=double_mask)
         self.bn2_ = norm_layer(width // 16)
+        self.conv3 = conv1x1(width // 16, 1)
+        self.bn3 = norm_layer(1)
         self.relu = nn.ReLU(inplace=True)
         self.sigmoid = nn.Sigmoid()
         self.downsample = downsample
@@ -308,9 +268,141 @@ class DeformattenSimpleBottleneck(nn.Module):
         out = self.bn2_(out)
         out = self.relu(out)
 
-        mean_out = torch.mean(out, dim=1, keepdim=True)
-        mean_out = self.sigmoid(mean_out)
-        out = mean_out * x
+        out = self.conv3(out)
+        out = self.bn3(out)
+        out = self.sigmoid(out)
+
+        out = out * x
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = self.relu(out)
+
+        return out
+
+class DeformattenSimpleBottleneck1(nn.Module):
+    """Used for cost aggregation"""
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
+                 base_width=64, norm_layer=None,
+                 mdconv_dilation=2,
+                 deformable_groups=2,
+                 modulation=True,
+                 double_mask=True,
+                 ):
+        super(DeformattenSimpleBottleneck1, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        width = int(planes * (base_width / 64.)) * groups
+        # Both self.conv2 and self.downsample layers downsample the input when stride != 1
+        self.conv1 = conv1x1(inplanes, width)
+        self.bn1 = norm_layer(width)
+        self.conv2 = DeformConv2d(width, width // 4, stride=stride,
+                                  dilation=mdconv_dilation,
+                                  deformable_groups=deformable_groups,
+                                  modulation=modulation,
+                                  double_mask=double_mask)
+        self.bn2 = norm_layer(width // 4)
+        self.conv2_ = DeformConv2d(width // 4, width // 16, stride=stride,
+                                  dilation=mdconv_dilation,
+                                  deformable_groups=deformable_groups,
+                                  modulation=modulation,
+                                  double_mask=double_mask)
+        self.bn2_ = norm_layer(width // 16)
+        self.conv3 = conv1x1(width // 16, 1)
+        self.bn3 = norm_layer(1)
+        self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        identity = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv2_(out)
+        out = self.bn2_(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
+        out = self.sigmoid(out)
+
+        out = out * x
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = self.relu(out)
+
+        return out
+
+class DeformattenSimpleBottleneck2(nn.Module):
+    """Used for cost aggregation"""
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
+                 base_width=64, norm_layer=None,
+                 mdconv_dilation=1,
+                 deformable_groups=2,
+                 modulation=True,
+                 double_mask=True,
+                 ):
+        super(DeformattenSimpleBottleneck2, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        width = int(planes * (base_width / 64.)) * groups
+        # Both self.conv2 and self.downsample layers downsample the input when stride != 1
+        self.conv1 = conv1x1(inplanes, width)
+        self.bn1 = norm_layer(width)
+        self.conv2 = DeformConv2d(width, width // 4, stride=stride,
+                                  dilation=mdconv_dilation,
+                                  deformable_groups=deformable_groups,
+                                  modulation=modulation,
+                                  double_mask=double_mask)
+        self.bn2 = norm_layer(width // 4)
+        self.conv2_ = DeformConv2d(width // 4, width // 16, stride=stride,
+                                  dilation=mdconv_dilation,
+                                  deformable_groups=deformable_groups,
+                                  modulation=modulation,
+                                  double_mask=double_mask)
+        self.bn2_ = norm_layer(width // 16)
+        self.conv3 = conv1x1(width // 16, 1)
+        self.bn3 = norm_layer(1)
+        self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        identity = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv2_(out)
+        out = self.bn2_(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
+        out = self.sigmoid(out)
+
+        out = out * x
 
         if self.downsample is not None:
             identity = self.downsample(x)
