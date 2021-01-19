@@ -357,38 +357,7 @@ class AdaptiveAggregationModule(nn.Module):
                 self.conva.append(nn.Sequential(nn.Conv2d(16, 32, kernel_size=1, bias=False),
                                   nn.BatchNorm2d(32),
                                   nn.LeakyReLU(0.2, inplace=True)))
-        # for i in range(self.num_output_branches):
-        #     self.fuse_layers.append(nn.ModuleList())
-        #     # For each branch (different scale)
-        #     for j in range(self.num_scales):
-        #         if i == j:
-        #             # Identity
-        #             self.fuse_layers[-1].append(nn.Identity())
-        #         elif i < j:
-        #             self.fuse_layers[-1].append(
-        #                 nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
-        #                                         kernel_size=1, bias=False),
-        #                               nn.BatchNorm2d(max_disp // (2 ** i)),
-        #                               ))
-        #         elif i > j:
-        #             layers = nn.ModuleList()
-        #             for k in range(i - j - 1):
-        #                 layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** j),
-        #                                                       kernel_size=3, stride=2, padding=1, bias=False),
-        #                                             nn.BatchNorm2d(max_disp // (2 ** j)),
-        #                                             nn.LeakyReLU(0.2, inplace=True),
-        #                                             ))
-        #
-        #             layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
-        #                                                   kernel_size=3, stride=2, padding=1, bias=False),
-        #                                         nn.BatchNorm2d(max_disp // (2 ** i))))
-        #             self.fuse_layers[-1].append(nn.Sequential(*layers))
-        # self.conva = nn.Sequential(nn.Conv2d(16, 32, kernel_size=1, bias=False),
-        #                            nn.BatchNorm2d(32),
-        #                            nn.LeakyReLU(0.2, inplace=True))
-        # self.convb = nn.Sequential(nn.Conv2d(32, 64, kernel_size=1, bias=False),
-        #                            nn.BatchNorm2d(64),
-        #                            nn.LeakyReLU(0.2, inplace=True))
+
         self.relu = nn.LeakyReLU(0.2, inplace=True)
 
     def forward(self, x):
@@ -422,15 +391,6 @@ class AdaptiveAggregationModule(nn.Module):
                 x_atten.append(self.fuse_layers[i](x[i]))
                 x_fused.append(x_atten[-1] * x[i] + exchange)
         x_fused = x_fused[::-1]
-        #     for j in range(len(self.branches)):
-        #         if j == 0:
-        #             x_fused.append(self.fuse_layers[i][0](x[0]))
-        #         else:
-        #             exchange = self.fuse_layers[i][j](x[j])
-        #             if exchange.size()[2:] != x_fused[i].size()[2:]:
-        #                 exchange = F.interpolate(exchange, size=x_fused[i].size()[2:],
-        #                                          mode='bilinear', align_corners=False)
-        #             x_fused[i] = x_fused[i] + exchange
 
         for i in range(len(x_fused)):
             x_fused[i] = self.relu(x_fused[i])
