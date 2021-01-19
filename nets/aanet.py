@@ -88,7 +88,6 @@ class AANet(nn.Module):
                                                    num_scales=num_scales,
                                                    num_fusions=num_fusions,
                                                    num_stage_blocks=num_stage_blocks,
-                                                   num_deform_blocks=num_deform_blocks,
                                                    mdconv_dilation=mdconv_dilation,
                                                    deformable_groups=deformable_groups,
                                                    intermediate_supervision=not no_intermediate_supervision)

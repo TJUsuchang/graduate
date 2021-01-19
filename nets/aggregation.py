@@ -314,7 +314,6 @@ class GCNetAggregation(nn.Module):
 class AdaptiveAggregationModule(nn.Module):
     def __init__(self, num_scales, num_output_branches, max_disp,
                  num_blocks=1,
-                 simple_bottleneck=False,
                  deformable_groups=2,
                  mdconv_dilation=2):
         super(AdaptiveAggregationModule, self).__init__()
@@ -331,12 +330,21 @@ class AdaptiveAggregationModule(nn.Module):
             num_candidates = max_disp // (2 ** i)
             branch = nn.ModuleList()
             for j in range(num_blocks):
-                if simple_bottleneck:
-                    branch.append(SimpleattenBottleneck(num_candidates, num_candidates))
-                else:
-                    branch.append(DeformattenSimpleBottleneck(num_candidates, num_candidates, modulation=True,
-                                                         mdconv_dilation=mdconv_dilation,
-                                                         deformable_groups=deformable_groups))
+                if j == 0:
+                    branch.append(DeformattenSimpleBottleneck0(num_candidates, num_candidates,
+                                                              modulation=True,
+                                                              mdconv_dilation=mdconv_dilation,
+                                                              deformable_groups=deformable_groups))
+                elif j == 1:
+                    branch.append(DeformattenSimpleBottleneck1(num_candidates, num_candidates,
+                                                              modulation=True,
+                                                              mdconv_dilation=mdconv_dilation,
+                                                              deformable_groups=deformable_groups))
+                elif j == 2:
+                    branch.append(DeformattenSimpleBottleneck2(num_candidates, num_candidates,
+                                                              modulation=True,
+                                                              mdconv_dilation=mdconv_dilation,
+                                                              deformable_groups=deformable_groups))
 
             self.branches.append(nn.Sequential(*branch))
 
@@ -407,7 +415,6 @@ class AdaptiveAggregationModule(nn.Module):
 class AdaptiveAggregation(nn.Module):
     def __init__(self, max_disp, num_scales=3, num_fusions=6,
                  num_stage_blocks=1,
-                 num_deform_blocks=2,
                  intermediate_supervision=True,
                  deformable_groups=2,
                  mdconv_dilation=2):
@@ -425,18 +432,12 @@ class AdaptiveAggregation(nn.Module):
             else:
                 num_out_branches = 1 if i == num_fusions - 1 else self.num_scales
 
-            if i >= num_fusions - num_deform_blocks:
-                simple_bottleneck_module = False
-            else:
-                simple_bottleneck_module = True
-
             fusions.append(AdaptiveAggregationModule(num_scales=self.num_scales,
                                                      num_output_branches=num_out_branches,
                                                      max_disp=max_disp,
                                                      num_blocks=num_stage_blocks,
                                                      mdconv_dilation=mdconv_dilation,
-                                                     deformable_groups=deformable_groups,
-                                                     simple_bottleneck=simple_bottleneck_module))
+                                                     deformable_groups=deformable_groups))
 
         self.fusions = nn.Sequential(*fusions)
 
