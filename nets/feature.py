@@ -283,7 +283,7 @@ class FeaturePyramidNetwork(nn.Module):
         add = torch.add(build[0], build[1], build[2])
 
 
-        return out
+        return
 
 
 class PSMNetFeature(nn.Module):
