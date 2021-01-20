@@ -230,7 +230,7 @@ class FeaturePyrmaid(nn.Module):
 #         return out
 
 class globalatten0(nn.Module):
-    def __init__(self, in_channels):
+    def __init__(self, in_channels=128):
         super(globalatten0, self).__init__()
 
         self.in_channels = in_channels
@@ -260,7 +260,7 @@ class globalatten0(nn.Module):
         return out
 
 class globalatten1(nn.Module):
-    def __init__(self, in_channels):
+    def __init__(self, in_channels=128):
         super(globalatten1, self).__init__()
 
         self.in_channels = in_channels
@@ -290,7 +290,7 @@ class globalatten1(nn.Module):
         return out
 
 class globalatten2(nn.Module):
-    def __init__(self, in_channels):
+    def __init__(self, in_channels=128):
         super(globalatten2, self).__init__()
 
         self.in_channels = in_channels
@@ -336,19 +336,19 @@ class FeaturePyramidNetwork(nn.Module):
                                                                kernel_size=5, stride=2, padding=2),
                                                      nn.BatchNorm2d(out_channels),
                                                      nn.ReLU(inplace=True)))
-                self.fpn_convs.append(globalatten0(out_channels))
+                self.fpn_convs.append(globalatten0())
             elif i == 1:
                 self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
                                                                kernel_size=3, stride=1, padding=1),
                                                      nn.BatchNorm2d(out_channels),
                                                      nn.ReLU(inplace=True)))
-                self.fpn_convs.append(globalatten1(out_channels))
+                self.fpn_convs.append(globalatten1())
             elif i == 2:
                 self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
                                                                kernel_size=1),
                                                      nn.BatchNorm2d(out_channels),
                                                      nn.ReLU(inplace=True)))
-                self.fpn_convs.append(globalatten2(out_channels))
+                self.fpn_convs.append(globalatten2())
 
     def forward(self, inputs):
         # Inputs: resolution high -> low
@@ -365,7 +365,7 @@ class FeaturePyramidNetwork(nn.Module):
         add = torch.add(build[0], build[1], )
         add = torch.add(add, build[2])
         out = [
-            self.fpn_convs[i](add[i]) for i in range(len(inputs))
+            self.fpn_convs[i](add) for i in range(len(inputs))
         ]
 
         return out
