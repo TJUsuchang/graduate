@@ -178,54 +178,70 @@ class FeaturePyrmaid(nn.Module):
         return [x, out1, out2]
 
 
+# class FeaturePyramidNetwork(nn.Module):
+#     def __init__(self, in_channels, out_channels=128,
+#                  num_levels=3):
+#         # FPN paper uses 256 out channels by default
+#         super(FeaturePyramidNetwork, self).__init__()
+#
+#         assert isinstance(in_channels, list)
+#
+#         self.in_channels = in_channels
+#
+#         self.lateral_convs = nn.ModuleList()
+#         self.fpn_convs = nn.ModuleList()
+#
+#         for i in range(num_levels):
+#             lateral_conv = nn.Conv2d(in_channels[i], out_channels, 1)
+#             fpn_conv = nn.Sequential(
+#                 nn.Conv2d(out_channels, out_channels, 3, padding=1),
+#                 nn.BatchNorm2d(out_channels),
+#                 nn.ReLU(inplace=True))
+#
+#             self.lateral_convs.append(lateral_conv)
+#             self.fpn_convs.append(fpn_conv)
+#
+#         # Initialize weights
+#         for m in self.modules():
+#             if isinstance(m, nn.Conv2d):
+#                 nn.init.xavier_uniform_(m.weight, gain=1)
+#                 if hasattr(m, 'bias'):
+#                     nn.init.constant_(m.bias, 0)
+#
+#     def forward(self, inputs):
+#         # Inputs: resolution high -> low
+#         assert len(self.in_channels) == len(inputs)
+#
+#         # Build laterals
+#         laterals = [lateral_conv(inputs[i])
+#                     for i, lateral_conv in enumerate(self.lateral_convs)]
+#
+#         # Build top-down path
+#         used_backbone_levels = len(laterals)
+#         for i in range(used_backbone_levels - 1, 0, -1):
+#             laterals[i - 1] += F.interpolate(
+#                 laterals[i], scale_factor=2, mode='nearest')
+#
+#         # Build outputs
+#         out = [
+#             self.fpn_convs[i](laterals[i]) for i in range(used_backbone_levels)
+#         ]
+#
+#         return out
+
 class FeaturePyramidNetwork(nn.Module):
     def __init__(self, in_channels, out_channels=128,
                  num_levels=3):
-        # FPN paper uses 256 out channels by default
         super(FeaturePyramidNetwork, self).__init__()
 
         assert isinstance(in_channels, list)
 
         self.in_channels = in_channels
-
-        self.lateral_convs = nn.ModuleList()
-        self.fpn_convs = nn.ModuleList()
-
-        for i in range(num_levels):
-            lateral_conv = nn.Conv2d(in_channels[i], out_channels, 1)
-            fpn_conv = nn.Sequential(
-                nn.Conv2d(out_channels, out_channels, 3, padding=1),
-                nn.BatchNorm2d(out_channels),
-                nn.ReLU(inplace=True))
-
-            self.lateral_convs.append(lateral_conv)
-            self.fpn_convs.append(fpn_conv)
-
-        # Initialize weights
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.xavier_uniform_(m.weight, gain=1)
-                if hasattr(m, 'bias'):
-                    nn.init.constant_(m.bias, 0)
+        self.
 
     def forward(self, inputs):
         # Inputs: resolution high -> low
         assert len(self.in_channels) == len(inputs)
-
-        # Build laterals
-        laterals = [lateral_conv(inputs[i])
-                    for i, lateral_conv in enumerate(self.lateral_convs)]
-
-        # Build top-down path
-        used_backbone_levels = len(laterals)
-        for i in range(used_backbone_levels - 1, 0, -1):
-            laterals[i - 1] += F.interpolate(
-                laterals[i], scale_factor=2, mode='nearest')
-
-        # Build outputs
-        out = [
-            self.fpn_convs[i](laterals[i]) for i in range(used_backbone_levels)
-        ]
 
         return out
 
