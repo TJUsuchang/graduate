@@ -229,16 +229,96 @@ class FeaturePyrmaid(nn.Module):
 #
 #         return out
 
-class globalatten(nn.Module):
-    def __init__(self):
-        super(globalatten, self).__init__()
+class globalatten0(nn.Module):
+    def __init__(self, in_channels):
+        super(globalatten0, self).__init__()
 
+        self.in_channels = in_channels
+        self.conv1 = nn.Conv2d(2, 1, kernel_size=7, padding=3, bias=False)
+        self.local_conv1 = nn.Sequential(nn.Conv2d(in_channels, in_channels // 16, kernel_size=1),
+                                         nn.BatchNorm2d(in_channels // 16),
+                                         nn.ReLU(inplace=True))
+        self.local_conv2 = nn.Sequential(nn.Conv2d(in_channels//16, in_channels // 16, kernel_size=3, padding=1),
+                                         nn.BatchNorm2d(in_channels // 16),
+                                         nn.ReLU(inplace=True))
+        self.local_conv3 = nn.Sequential(nn.Conv2d(in_channels//16, in_channels, kernel_size=1),
+                                         nn.BatchNorm2d(in_channels),
+                                         nn.ReLU(inplace=True))
         self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
 
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        out = self.conv1(cat)
+        out = self.sigmoid(out)
+        atten = out * x
+        local = self.local_conv3(self.local_conv2(self.local_conv1(x)))
+        out = atten + local
 
-    def forward(self):
+        return out
 
-        return
+class globalatten1(nn.Module):
+    def __init__(self, in_channels):
+        super(globalatten1, self).__init__()
+
+        self.in_channels = in_channels
+        self.conv1 = nn.Conv2d(2, 1, kernel_size=5, padding=2, bias=False)
+        self.local_conv1 = nn.Sequential(nn.Conv2d(in_channels, in_channels // 16, kernel_size=1),
+                                         nn.BatchNorm2d(in_channels // 16),
+                                         nn.ReLU(inplace=True))
+        self.local_conv2 = nn.Sequential(nn.Conv2d(in_channels//16, in_channels // 16, kernel_size=3, padding=1),
+                                         nn.BatchNorm2d(in_channels // 16),
+                                         nn.ReLU(inplace=True))
+        self.local_conv3 = nn.Sequential(nn.Conv2d(in_channels//16, in_channels, kernel_size=1),
+                                         nn.BatchNorm2d(in_channels),
+                                         nn.ReLU(inplace=True))
+        self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        out = self.conv1(cat)
+        out = self.sigmoid(out)
+        atten = out * x
+        local = self.local_conv3(self.local_conv2(self.local_conv1(x)))
+        out = atten + local
+
+        return out
+
+class globalatten2(nn.Module):
+    def __init__(self, in_channels):
+        super(globalatten2, self).__init__()
+
+        self.in_channels = in_channels
+        self.conv1 = nn.Conv2d(2, 1, kernel_size=3, padding=1, bias=False)
+        self.local_conv1 = nn.Sequential(nn.Conv2d(in_channels, in_channels // 16, kernel_size=1),
+                                         nn.BatchNorm2d(in_channels // 16),
+                                         nn.ReLU(inplace=True))
+        self.local_conv2 = nn.Sequential(nn.Conv2d(in_channels//16, in_channels // 16, kernel_size=3, padding=1),
+                                         nn.BatchNorm2d(in_channels // 16),
+                                         nn.ReLU(inplace=True))
+        self.local_conv3 = nn.Sequential(nn.Conv2d(in_channels//16, in_channels, kernel_size=1),
+                                         nn.BatchNorm2d(in_channels),
+                                         nn.ReLU(inplace=True))
+        self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        out = self.conv1(cat)
+        out = self.sigmoid(out)
+        atten = out * x
+        local = self.local_conv3(self.local_conv2(self.local_conv1(x)))
+        out = atten + local
+
+        return out
+
 
 class FeaturePyramidNetwork(nn.Module):
     def __init__(self, in_channels, out_channels=128,
@@ -256,17 +336,19 @@ class FeaturePyramidNetwork(nn.Module):
                                                                kernel_size=5, stride=2, padding=2),
                                                      nn.BatchNorm2d(out_channels),
                                                      nn.ReLU(inplace=True)))
-                self.fpn_convs.append()
+                self.fpn_convs.append(globalatten0(out_channels))
             elif i == 1:
                 self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
                                                                kernel_size=3, stride=1, padding=1),
                                                      nn.BatchNorm2d(out_channels),
                                                      nn.ReLU(inplace=True)))
+                self.fpn_convs.append(globalatten1(out_channels))
             elif i == 2:
                 self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
                                                                kernel_size=1),
                                                      nn.BatchNorm2d(out_channels),
                                                      nn.ReLU(inplace=True)))
+                self.fpn_convs.append(globalatten2(out_channels))
 
     def forward(self, inputs):
         # Inputs: resolution high -> low
@@ -274,16 +356,19 @@ class FeaturePyramidNetwork(nn.Module):
         build = []
         for i in range(len(inputs)):
             if i == 0:
-                build.append(self.build_conv(inputs[0]))
+                build.append(self.build_conv[0](inputs[0]))
             elif i == 1:
-                build.append(self.build_conv(inputs[1]))
+                build.append(self.build_conv[1](inputs[1]))
             elif i == 2:
-                build.append(F.interpolate((self.build_conv(inputs[2])),
+                build.append(F.interpolate((self.build_conv[2](inputs[2])),
                                            scale_factor=2, mode='bilinear', align_corners=False))
-        add = torch.add(build[0], build[1], build[2])
+        add = torch.add(build[0], build[1], )
+        add = torch.add(add, build[2])
+        out = [
+            self.fpn_convs[i](add[i]) for i in range(len(inputs))
+        ]
 
-
-        return
+        return out
 
 
 class PSMNetFeature(nn.Module):
