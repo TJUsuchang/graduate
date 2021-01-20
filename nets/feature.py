@@ -237,11 +237,41 @@ class FeaturePyramidNetwork(nn.Module):
         assert isinstance(in_channels, list)
 
         self.in_channels = in_channels
-        self.
+        self.lateral_convs = nn.ModuleList()
+        self.fpn_convs = nn.ModuleList()
+
+        self.build_conv = nn.ModuleList()
+        for i in range(num_levels):
+            if i == 0:
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
+                                                               kernel_size=5, stride=2, padding=2),
+                                                     nn.BatchNorm2d(out_channels),
+                                                     nn.ReLU(inplace=True)))
+            elif i == 1:
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
+                                                               kernel_size=3, stride=1, padding=1),
+                                                     nn.BatchNorm2d(out_channels),
+                                                     nn.ReLU(inplace=True)))
+            elif i == 2:
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
+                                                               kernel_size=1),
+                                                     nn.BatchNorm2d(out_channels),
+                                                     nn.ReLU(inplace=True)))
 
     def forward(self, inputs):
         # Inputs: resolution high -> low
         assert len(self.in_channels) == len(inputs)
+        build = []
+        for i in range(len(inputs)):
+            if i == 0:
+                build.append(self.build_conv(inputs[0]))
+            elif i == 1:
+                build.append(self.build_conv(inputs[1]))
+            elif i == 2:
+                build.append(F.interpolate((self.build_conv(inputs[2])),
+                                           scale_factor=2, mode='bilinear', align_corners=False))
+        add = torch.add(build[0], build[1], build[2])
+
 
         return out
 
