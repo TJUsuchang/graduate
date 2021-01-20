@@ -229,6 +229,17 @@ class FeaturePyrmaid(nn.Module):
 #
 #         return out
 
+class globalatten(nn.Module):
+    def __init__(self):
+        super(globalatten, self).__init__()
+
+        self.relu = nn.ReLU(inplace=True)
+
+
+    def forward(self):
+
+        return
+
 class FeaturePyramidNetwork(nn.Module):
     def __init__(self, in_channels, out_channels=128,
                  num_levels=3):
@@ -237,9 +248,7 @@ class FeaturePyramidNetwork(nn.Module):
         assert isinstance(in_channels, list)
 
         self.in_channels = in_channels
-        self.lateral_convs = nn.ModuleList()
         self.fpn_convs = nn.ModuleList()
-
         self.build_conv = nn.ModuleList()
         for i in range(num_levels):
             if i == 0:
@@ -247,6 +256,7 @@ class FeaturePyramidNetwork(nn.Module):
                                                                kernel_size=5, stride=2, padding=2),
                                                      nn.BatchNorm2d(out_channels),
                                                      nn.ReLU(inplace=True)))
+                self.fpn_convs.append()
             elif i == 1:
                 self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
                                                                kernel_size=3, stride=1, padding=1),
