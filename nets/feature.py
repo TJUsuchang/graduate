@@ -235,15 +235,6 @@ class globalatten0(nn.Module):
 
         self.in_channels = in_channels
         self.conv1 = nn.Conv2d(2, 1, kernel_size=7, padding=3, bias=False)
-        self.local_conv1 = nn.Sequential(nn.Conv2d(in_channels, in_channels // 16, kernel_size=1),
-                                         nn.BatchNorm2d(in_channels // 16),
-                                         nn.ReLU(inplace=True))
-        self.local_conv2 = nn.Sequential(nn.Conv2d(in_channels//16, in_channels // 16, kernel_size=3, padding=1),
-                                         nn.BatchNorm2d(in_channels // 16),
-                                         nn.ReLU(inplace=True))
-        self.local_conv3 = nn.Sequential(nn.Conv2d(in_channels//16, in_channels, kernel_size=1),
-                                         nn.BatchNorm2d(in_channels),
-                                         nn.ReLU(inplace=True))
         self.relu = nn.ReLU(inplace=True)
         self.sigmoid = nn.Sigmoid()
 
@@ -254,7 +245,8 @@ class globalatten0(nn.Module):
         out = self.conv1(cat)
         out = self.sigmoid(out)
         atten = out * x
-        local = self.local_conv3(self.local_conv2(self.local_conv1(x)))
+        atten = F.interpolate(atten, scale_factor=2, mode='bilinear', align_corners=False)
+        local = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
         out = atten + local
 
         return out
@@ -265,15 +257,6 @@ class globalatten1(nn.Module):
 
         self.in_channels = in_channels
         self.conv1 = nn.Conv2d(2, 1, kernel_size=5, padding=2, bias=False)
-        self.local_conv1 = nn.Sequential(nn.Conv2d(in_channels, in_channels // 16, kernel_size=1),
-                                         nn.BatchNorm2d(in_channels // 16),
-                                         nn.ReLU(inplace=True))
-        self.local_conv2 = nn.Sequential(nn.Conv2d(in_channels//16, in_channels // 16, kernel_size=3, padding=1),
-                                         nn.BatchNorm2d(in_channels // 16),
-                                         nn.ReLU(inplace=True))
-        self.local_conv3 = nn.Sequential(nn.Conv2d(in_channels//16, in_channels, kernel_size=1),
-                                         nn.BatchNorm2d(in_channels),
-                                         nn.ReLU(inplace=True))
         self.relu = nn.ReLU(inplace=True)
         self.sigmoid = nn.Sigmoid()
 
@@ -284,8 +267,7 @@ class globalatten1(nn.Module):
         out = self.conv1(cat)
         out = self.sigmoid(out)
         atten = out * x
-        local = self.local_conv3(self.local_conv2(self.local_conv1(x)))
-        out = atten + local
+        out = atten + x
 
         return out
 
@@ -295,15 +277,12 @@ class globalatten2(nn.Module):
 
         self.in_channels = in_channels
         self.conv1 = nn.Conv2d(2, 1, kernel_size=3, padding=1, bias=False)
-        self.local_conv1 = nn.Sequential(nn.Conv2d(in_channels, in_channels // 16, kernel_size=1),
-                                         nn.BatchNorm2d(in_channels // 16),
-                                         nn.ReLU(inplace=True))
-        self.local_conv2 = nn.Sequential(nn.Conv2d(in_channels//16, in_channels // 16, kernel_size=3, padding=1),
-                                         nn.BatchNorm2d(in_channels // 16),
-                                         nn.ReLU(inplace=True))
-        self.local_conv3 = nn.Sequential(nn.Conv2d(in_channels//16, in_channels, kernel_size=1),
-                                         nn.BatchNorm2d(in_channels),
-                                         nn.ReLU(inplace=True))
+        self.conv2 = nn.Sequential(nn.Conv2d(in_channels, in_channels, 3, stride=2, padding=1),
+                                   nn.BatchNorm2d(in_channels),
+                                   nn.ReLU(inplace=True))
+        self.conv3 = nn.Sequential(nn.Conv2d(in_channels, in_channels, 3, stride=2, padding=1),
+                                   nn.BatchNorm2d(in_channels),
+                                   nn.ReLU(inplace=True))
         self.relu = nn.ReLU(inplace=True)
         self.sigmoid = nn.Sigmoid()
 
@@ -314,7 +293,8 @@ class globalatten2(nn.Module):
         out = self.conv1(cat)
         out = self.sigmoid(out)
         atten = out * x
-        local = self.local_conv3(self.local_conv2(self.local_conv1(x)))
+        atten = self.conv2(atten)
+        local = self.conv3(x)
         out = atten + local
 
         return out
