@@ -330,23 +330,36 @@ class FeaturePyramidNetwork(nn.Module):
         self.in_channels = in_channels
         self.fpn_convs = nn.ModuleList()
         self.build_conv = nn.ModuleList()
+        self.catconvs = nn.Sequential(nn.Conv2d(out_channels, out_channels, 1),
+                                      nn.BatchNorm2d(out_channels),
+                                      nn.ReLU(inplace=True),
+                                      nn.Conv2d(out_channels, out_channels, 3, padding=1),
+                                      nn.BatchNorm2d(out_channels),
+                                      nn.ReLU(inplace=True),
+                                      nn.Conv2d(out_channels, out_channels, 1),
+                                      nn.BatchNorm2d(out_channels),
+                                      nn.ReLU(inplace=True))
         for i in range(num_levels):
             if i == 0:
-                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
-                                                               kernel_size=5, stride=2, padding=2),
-                                                     nn.BatchNorm2d(out_channels),
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels // 4,
+                                                               kernel_size=3, stride=2, padding=1),
+                                                     nn.BatchNorm2d(out_channels // 4),
+                                                     nn.ReLU(inplace=True)))
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels // 4,
+                                                               kernel_size=7, stride=2, padding=3),
+                                                     nn.BatchNorm2d(out_channels // 4),
                                                      nn.ReLU(inplace=True)))
                 self.fpn_convs.append(globalatten0())
             elif i == 1:
-                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
-                                                               kernel_size=3, stride=1, padding=1),
-                                                     nn.BatchNorm2d(out_channels),
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels // 4,
+                                                               kernel_size=1),
+                                                     nn.BatchNorm2d(out_channels // 4),
                                                      nn.ReLU(inplace=True)))
                 self.fpn_convs.append(globalatten1())
             elif i == 2:
-                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels // 4,
                                                                kernel_size=1),
-                                                     nn.BatchNorm2d(out_channels),
+                                                     nn.BatchNorm2d(out_channels // 4),
                                                      nn.ReLU(inplace=True)))
                 self.fpn_convs.append(globalatten2())
 
@@ -357,15 +370,16 @@ class FeaturePyramidNetwork(nn.Module):
         for i in range(len(inputs)):
             if i == 0:
                 build.append(self.build_conv[0](inputs[0]))
+                build.append(self.build_conv[1](inputs[0]))
             elif i == 1:
-                build.append(self.build_conv[1](inputs[1]))
+                build.append(self.build_conv[2](inputs[1]))
             elif i == 2:
-                build.append(F.interpolate((self.build_conv[2](inputs[2])),
+                build.append(F.interpolate((self.build_conv[3](inputs[2])),
                                            scale_factor=2, mode='bilinear', align_corners=False))
-        add = torch.add(build[0], build[1], )
-        add = torch.add(add, build[2])
+        cat = torch.cat((build[0], build[1], build[2], build[3]), dim=1)
+        pre_out = self.catconvs(cat)
         out = [
-            self.fpn_convs[i](add) for i in range(len(inputs))
+            self.fpn_convs[i](pre_out) for i in range(len(inputs))
         ]
 
         return out
