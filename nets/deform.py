@@ -3,45 +3,99 @@ import torch
 from nets.deform_conv import DeformConv, ModulatedDeformConv
 
 class globalpoolatten3(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels=16):
         super(globalpoolatten3, self).__init__()
-        self.conv1 = nn.Conv2d(2, 1, kernel_size=3, padding=1, bias=False)
-        self.sigmoid = nn.Sigmoid()
+        self.conv1 = nn.Sequential(nn.Conv2d(in_channels, in_channels // 4, kernel_size=1),
+                                   nn.BatchNorm2d(in_channels // 4),
+                                   nn.ReLU(inplace=True))
+        self.dilated_conv1 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels // 4,
+                                                    kernel_size=3, dilation=1, padding=1),
+                                           nn.BatchNorm2d(in_channels // 4),
+                                           nn.ReLU(inplace=True))
+        self.dilated_conv2 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels // 4,
+                                                    kernel_size=3, dilation=2, padding=2),
+                                           nn.BatchNorm2d(in_channels // 4),
+                                           nn.ReLU(inplace=True))
+        self.dilated_conv3 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels // 4,
+                                                    kernel_size=3, dilation=5, padding=5),
+                                           nn.BatchNorm2d(in_channels // 4),
+                                           nn.ReLU(inplace=True))
+        self.conv2 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels, kernel_size=1),
+                                   nn.BatchNorm2d(in_channels),
+                                   nn.Sigmoid())
 
     def forward(self, x):
-        avg_out = torch.mean(x, dim=1, keepdim=True)
-        max_out, _ = torch.max(x, dim=1, keepdim=True)
-        cat = torch.cat([avg_out, max_out], dim=1)
-        atten = self.conv1(cat)
-        out = self.sigmoid(atten) * x
+        out = self.conv1(x)
+        out = self.dilated_conv1(out)
+        out = self.dilated_conv2(out)
+        out = self.dilated_conv3(out)
+        out = self.conv2(out)
+        out = out * x
+        out = out + x
         return out
 
 class globalpoolatten5(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels=32):
         super(globalpoolatten5, self).__init__()
-        self.conv1 = nn.Conv2d(2, 1, kernel_size=5, padding=2, bias=False)
-        self.sigmoid = nn.Sigmoid()
+        self.conv1 = nn.Sequential(nn.Conv2d(in_channels, in_channels // 4, kernel_size=1),
+                                   nn.BatchNorm2d(in_channels // 4),
+                                   nn.ReLU(inplace=True))
+        self.dilated_conv1 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels // 4,
+                                                     kernel_size=3, dilation=1, padding=1),
+                                           nn.BatchNorm2d(in_channels // 4),
+                                           nn.ReLU(inplace=True))
+        self.dilated_conv2 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels // 4,
+                                                     kernel_size=3, dilation=2, padding=2),
+                                           nn.BatchNorm2d(in_channels // 4),
+                                           nn.ReLU(inplace=True))
+        self.dilated_conv3 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels // 4,
+                                                     kernel_size=3, dilation=5, padding=5),
+                                           nn.BatchNorm2d(in_channels // 4),
+                                           nn.ReLU(inplace=True))
+        self.conv2 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels, kernel_size=1),
+                                   nn.BatchNorm2d(in_channels),
+                                   nn.Sigmoid())
 
     def forward(self, x):
-        avg_out = torch.mean(x, dim=1, keepdim=True)
-        max_out, _ = torch.max(x, dim=1, keepdim=True)
-        cat = torch.cat([avg_out, max_out], dim=1)
-        atten = self.conv1(cat)
-        out = self.sigmoid(atten) * x
+        out = self.conv1(x)
+        out = self.dilated_conv1(out)
+        out = self.dilated_conv2(out)
+        out = self.dilated_conv3(out)
+        out = self.conv2(out)
+        out = out * x
+        out = out + x
         return out
 
 class globalpoolatten7(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels=64):
         super(globalpoolatten7, self).__init__()
-        self.conv1 = nn.Conv2d(2, 1, kernel_size=7, padding=3, bias=False)
-        self.sigmoid = nn.Sigmoid()
+        self.conv1 = nn.Sequential(nn.Conv2d(in_channels, in_channels // 4, kernel_size=1),
+                                   nn.BatchNorm2d(in_channels // 4),
+                                   nn.ReLU(inplace=True))
+        self.dilated_conv1 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels // 4,
+                                                     kernel_size=3, dilation=1, padding=1),
+                                           nn.BatchNorm2d(in_channels // 4),
+                                           nn.ReLU(inplace=True))
+        self.dilated_conv2 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels // 4,
+                                                     kernel_size=3, dilation=2, padding=2),
+                                           nn.BatchNorm2d(in_channels // 4),
+                                           nn.ReLU(inplace=True))
+        self.dilated_conv3 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels // 4,
+                                                     kernel_size=3, dilation=5, padding=5),
+                                           nn.BatchNorm2d(in_channels // 4),
+                                           nn.ReLU(inplace=True))
+        self.conv2 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels, kernel_size=1),
+                                   nn.BatchNorm2d(in_channels),
+                                   nn.Sigmoid())
 
     def forward(self, x):
-        avg_out = torch.mean(x, dim=1, keepdim=True)
-        max_out, _ = torch.max(x, dim=1, keepdim=True)
-        cat = torch.cat([avg_out, max_out], dim=1)
-        atten = self.conv1(cat)
-        out = self.sigmoid(atten) * x
+        out = self.conv1(x)
+        out = self.dilated_conv1(out)
+        out = self.dilated_conv2(out)
+        out = self.dilated_conv3(out)
+        out = self.conv2(out)
+        out = out * x
+        out = out + x
         return out
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
