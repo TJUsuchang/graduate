@@ -326,7 +326,7 @@ class FeaturePyramidNetwork(nn.Module):
                                                      nn.BatchNorm2d(out_channels // 4),
                                                      nn.ReLU(inplace=True)))
                 self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels // 4,
-                                                               kernel_size=7, stride=2, padding=3),
+                                                               kernel_size=5, stride=2, padding=2),
                                                      nn.BatchNorm2d(out_channels // 4),
                                                      nn.ReLU(inplace=True)))
                 self.fpn_convs.append(globalatten0())
