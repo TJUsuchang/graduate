@@ -12,14 +12,6 @@ class globalpoolatten3(nn.Module):
                                                     kernel_size=3, dilation=1, padding=1),
                                            nn.BatchNorm2d(in_channels // 4),
                                            nn.ReLU(inplace=True))
-        self.dilated_conv2 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels // 4,
-                                                    kernel_size=3, dilation=2, padding=2),
-                                           nn.BatchNorm2d(in_channels // 4),
-                                           nn.ReLU(inplace=True))
-        self.dilated_conv3 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels // 4,
-                                                    kernel_size=3, dilation=5, padding=5),
-                                           nn.BatchNorm2d(in_channels // 4),
-                                           nn.ReLU(inplace=True))
         self.conv2 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels, kernel_size=1),
                                    nn.BatchNorm2d(in_channels),
                                    nn.Sigmoid())
@@ -27,8 +19,6 @@ class globalpoolatten3(nn.Module):
     def forward(self, x):
         out = self.conv1(x)
         out = self.dilated_conv1(out)
-        out = self.dilated_conv2(out)
-        out = self.dilated_conv3(out)
         out = self.conv2(out)
         out = out * x
         out = out + x
@@ -48,10 +38,6 @@ class globalpoolatten5(nn.Module):
                                                      kernel_size=3, dilation=2, padding=2),
                                            nn.BatchNorm2d(in_channels // 4),
                                            nn.ReLU(inplace=True))
-        self.dilated_conv3 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels // 4,
-                                                     kernel_size=3, dilation=5, padding=5),
-                                           nn.BatchNorm2d(in_channels // 4),
-                                           nn.ReLU(inplace=True))
         self.conv2 = nn.Sequential(nn.Conv2d(in_channels // 4, in_channels, kernel_size=1),
                                    nn.BatchNorm2d(in_channels),
                                    nn.Sigmoid())
@@ -60,7 +46,6 @@ class globalpoolatten5(nn.Module):
         out = self.conv1(x)
         out = self.dilated_conv1(out)
         out = self.dilated_conv2(out)
-        out = self.dilated_conv3(out)
         out = self.conv2(out)
         out = out * x
         out = out + x
