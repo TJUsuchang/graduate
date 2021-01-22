@@ -322,19 +322,19 @@ class FeaturePyramidNetwork(nn.Module):
         for i in range(num_levels):
             if i == 0:
                 self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
-                                                               kernel_size=5, stride=2, padding=2),
+                                                               kernel_size=3, stride=2, padding=1),
                                                      nn.BatchNorm2d(out_channels),
                                                      nn.ReLU(inplace=True)))
                 self.fpn_convs.append(globalatten0())
             elif i == 1:
                 self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
-                                                               kernel_size=3, stride=1, padding=1),
+                                                               kernel_size=1, stride=1),
                                                      nn.BatchNorm2d(out_channels),
                                                      nn.ReLU(inplace=True)))
                 self.fpn_convs.append(globalatten1())
             elif i == 2:
                 self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels,
-                                                               kernel_size=1),
+                                                               kernel_size=1, stride=1),
                                                      nn.BatchNorm2d(out_channels),
                                                      nn.ReLU(inplace=True)))
                 self.fpn_convs.append(globalatten2())
