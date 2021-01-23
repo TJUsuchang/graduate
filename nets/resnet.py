@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from nets.deform import DeformBottleneck
+from nets.deform import DeformBottleneck, ChannelAttention, SpatialAttention
 
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
@@ -73,6 +73,8 @@ class Bottleneck(nn.Module):
         self.conv3 = conv1x1(width, planes * self.expansion)
         self.bn3 = norm_layer(planes * self.expansion)
         self.relu = nn.ReLU(inplace=True)
+        self.ca = ChannelAttention(planes * self.expansion)
+        self.sa = SpatialAttention()
         self.downsample = downsample
         self.stride = stride
 
@@ -89,6 +91,9 @@ class Bottleneck(nn.Module):
 
         out = self.conv3(out)
         out = self.bn3(out)
+
+        out = self.sa(out) * out
+        out = self.ca(out) * out
 
         if self.downsample is not None:
             identity = self.downsample(x)
