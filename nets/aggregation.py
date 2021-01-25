@@ -421,9 +421,9 @@ class AdaptiveAggregation(nn.Module):
                 num_out_branches = 1 if i == num_fusions - 1 else self.num_scales
 
             if i >= num_fusions - num_deform_blocks:
-                simple_bottleneck_module = False
-            else:
                 simple_bottleneck_module = True
+            else:
+                simple_bottleneck_module = False
 
             fusions.append(AdaptiveAggregationModule(num_scales=self.num_scales,
                                                      num_output_branches=num_out_branches,
