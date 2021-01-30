@@ -363,12 +363,6 @@ class AdaptiveAggregationModule(nn.Module):
                                                 nn.LeakyReLU(0.2, inplace=True)))
 
         self.relu = nn.LeakyReLU(0.2, inplace=True)
-        self.convc1 = nn.Sequential(nn.Conv2d(64, 32, kernel_size=1, bias=False),
-                                    nn.BatchNorm2d(32),
-                                    nn.LeakyReLU(0.2, inplace=True))
-        self.convc2 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=1, bias=False),
-                                    nn.BatchNorm2d(64),
-                                    nn.LeakyReLU(0.2, inplace=True))
 
     def forward(self, x):
         assert len(self.branches) == len(x)
@@ -384,8 +378,7 @@ class AdaptiveAggregationModule(nn.Module):
                 exchange = F.interpolate(x_fused[-1], scale_factor=2,
                                          mode='bilinear', align_corners=False)
                 exchange = self.conva[-1](exchange)
-                x[i] = torch.cat((x[i], exchange), dim=1) # + / add / concat
-                x[i] = self.convc1(x[i])
+                x[i] = x[i] + exchange # + / add / concat
                 x[i] = self.branches[i](x[i])
                 x_atten.append(self.fuse_layers[i](x[i]))
                 x_fused.append(x_atten[-1] + x[i] + exchange)
@@ -393,8 +386,7 @@ class AdaptiveAggregationModule(nn.Module):
                 exchange = F.interpolate(x_fused[-1], scale_factor=2,
                                              mode='bilinear', align_corners=False)
                 exchange = self.convb[-1](exchange)
-                x[i] = torch.cat((x[i], exchange), dim=1) # + / add / concat
-                x[i] = self.convc2(x[i])
+                x[i] = x[i] + exchange # + / add / concat
                 x[i] = self.branches[i](x[i])
                 x_atten.append(self.fuse_layers[i](x[i]))
                 x_fused.append(x_atten[-1] + x[i] + exchange)
