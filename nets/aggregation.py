@@ -331,17 +331,17 @@ class AdaptiveAggregationModule(nn.Module):
         for i in range(self.num_scales):
             if i == 0:
                 if simple_bottleneck:
-                    self.branches.append(nn.Sequential(SimpleBottleneck(128, 64)))
+                    self.branches.append(nn.Sequential(SimpleBottleneck(64, 64)))
                 else:
-                    self.branches.append(nn.Sequential(DeformSimpleBottleneck(128, 64, modulation=True,
+                    self.branches.append(nn.Sequential(DeformSimpleBottleneck(64, 64, modulation=True,
                                                                               mdconv_dilation=mdconv_dilation,
                                                                               deformable_groups=deformable_groups)))
                 self.fuse_layers.append(globalpoolatten7())
             elif i == 1:
                 if simple_bottleneck:
-                    self.branches.append(nn.Sequential(SimpleBottleneck(64, 32)))
+                    self.branches.append(nn.Sequential(SimpleBottleneck(32, 32)))
                 else:
-                    self.branches.append(nn.Sequential(DeformSimpleBottleneck(64, 32, modulation=True,
+                    self.branches.append(nn.Sequential(DeformSimpleBottleneck(32, 32, modulation=True,
                                                                               mdconv_dilation=mdconv_dilation,
                                                                               deformable_groups=deformable_groups)))
 
@@ -363,12 +363,12 @@ class AdaptiveAggregationModule(nn.Module):
                                                 nn.LeakyReLU(0.2, inplace=True)))
 
         self.relu = nn.LeakyReLU(0.2, inplace=True)
-        # self.convc1 = nn.Sequential(nn.Conv2d(64, 32, kernel_size=1, bias=False),
-        #                             nn.BatchNorm2d(32),
-        #                             nn.LeakyReLU(0.2, inplace=True))
-        # self.convc2 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=1, bias=False),
-        #                             nn.BatchNorm2d(64),
-        #                             nn.LeakyReLU(0.2, inplace=True))
+        self.convc1 = nn.Sequential(nn.Conv2d(64, 32, kernel_size=1, bias=False),
+                                    nn.BatchNorm2d(32),
+                                    nn.LeakyReLU(0.2, inplace=True))
+        self.convc2 = nn.Sequential(nn.Conv2d(128, 64, kernel_size=1, bias=False),
+                                    nn.BatchNorm2d(64),
+                                    nn.LeakyReLU(0.2, inplace=True))
 
     def forward(self, x):
         assert len(self.branches) == len(x)
@@ -377,28 +377,25 @@ class AdaptiveAggregationModule(nn.Module):
         x_fused = []
         for i in range(len(self.branches) - 1, -1, -1):
             if i == 2:
-                dconv = self.branches[i]
-                x[i] = dconv(x[i])
+                x[i] = self.branches[i](x[i])
                 x_atten.append(self.fuse_layers[i](x[i]))
                 x_fused.append(x_atten[-1] + x[i])
             elif i == 1:
                 exchange = F.interpolate(x_fused[-1], scale_factor=2,
                                          mode='bilinear', align_corners=False)
                 exchange = self.conva[-1](exchange)
-                # exchange = self.convc1(exchange)
                 x[i] = torch.cat((x[i], exchange), dim=1) # + / add / concat
-                dconv = self.branches[i]
-                x[i] = dconv(x[i])
+                x[i] = self.convc1(x[i])
+                x[i] = self.branches[i](x[i])
                 x_atten.append(self.fuse_layers[i](x[i]))
                 x_fused.append(x_atten[-1] + x[i] + exchange)
             elif i == 0:
                 exchange = F.interpolate(x_fused[-1], scale_factor=2,
                                              mode='bilinear', align_corners=False)
                 exchange = self.convb[-1](exchange)
-                # exchange = self.convc2(exchange)
                 x[i] = torch.cat((x[i], exchange), dim=1) # + / add / concat
-                dconv = self.branches[i]
-                x[i] = dconv(x[i])
+                x[i] = self.convc2(x[i])
+                x[i] = self.branches[i](x[i])
                 x_atten.append(self.fuse_layers[i](x[i]))
                 x_fused.append(x_atten[-1] + x[i] + exchange)
 
@@ -433,9 +430,9 @@ class AdaptiveAggregation(nn.Module):
                 num_out_branches = 1 if i == num_fusions - 1 else self.num_scales
 
             if i >= num_fusions - num_deform_blocks:
-                simple_bottleneck_module = True
-            else:
                 simple_bottleneck_module = False
+            else:
+                simple_bottleneck_module = True
 
             fusions.append(AdaptiveAggregationModule(num_scales=self.num_scales,
                                                      num_output_branches=num_out_branches,
