@@ -325,6 +325,8 @@ class AdaptiveAggregationModule(nn.Module):
         self.num_blocks = num_blocks
 
         self.branches = nn.ModuleList()
+        self.h = nn.ModuleList()
+        self.w = nn.ModuleList()
 
         # Adaptive intra-scale aggregation
         for i in range(self.num_scales):
@@ -373,11 +375,24 @@ class AdaptiveAggregationModule(nn.Module):
     def forward(self, x):
         assert len(self.branches) == len(x)
 
+        preisa = []
         for i in range(len(self.branches)):
             branch = self.branches[i]
+            if i == 0:
+                a = self.h[0](x[0]) * x[0]
+                b = self.w[0](x[0]) * x[0]
+                preisa.append(torch.cat((a, b), dim=1))
+            elif i == 1:
+                a = self.h[1](x[1]) * x[1]
+                b = self.w[1](x[1]) * x[1]
+                preisa.append(torch.cat((a, b), dim=1))
+            elif i == 2:
+                a = self.h[2](x[2]) * x[2]
+                b = self.w[2](x[2]) * x[2]
+                preisa.append(torch.cat((a, b), dim=1))
             for j in range(self.num_blocks):
                 dconv = branch[j]
-                x[i] = dconv(x[i])
+                x[i] = dconv(preisa[i])
 
         if self.num_scales == 1:  # without fusions
             return x
