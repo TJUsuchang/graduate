@@ -352,6 +352,7 @@ class AdaptiveAggregationModule(nn.Module):
             self.branches.append(nn.Sequential(*branch))
 
         self.fuse_layers = nn.ModuleList()
+        self.fuse_layers2 = nn.ModuleList()
         self.conva = nn.ModuleList()
         self.convb = nn.ModuleList()
         # Adaptive cross-scale aggregation
@@ -432,28 +433,40 @@ class AdaptiveAggregationModule(nn.Module):
 
         x_atten = []
         x_fused = []
+        x_fused2 = []
+        for i in range(len(self.fuse_layers)):
+            for j in range(len(self.branches)):
+                if j == 0:
+                    x_fused.append(self.fuse_layers[i][0](x[0]))
+                else:
+                    exchange = self.fuse_layers[i][j](x[j])
+                    if exchange.size()[2:] != x_fused[i].size()[2:]:
+                        exchange = F.interpolate(exchange, size=x_fused[i].size()[2:],
+                                                 mode='bilinear', align_corners=False)
+                    x_fused[i] = x_fused[i] + exchange
+
         for i in range(2, -1, -1):
             if i == 2:
-                x_atten.append(self.fuse_layers[i](x[i]))
-                x_fused.append(x_atten[-1] + x[i])
+                x_atten.append(self.fuse_layers2[i](x_fused[i]))
+                x_fused2.append(x_atten[-1] + x_fused[i])
             elif i == 1:
-                exchange = F.interpolate(x_fused[-1], scale_factor=2,
-                                     mode='bilinear', align_corners=False)
+                exchange = F.interpolate(x_fused2[-1], scale_factor=2,
+                                         mode='bilinear', align_corners=False)
                 exchange = self.conva[-1](exchange)
-                x_atten.append(self.fuse_layers[i](x[i]))
-                x_fused.append(x_atten[-1] + x[i] + exchange)
+                x_atten.append(self.fuse_layers2[i](x[i]))
+                x_fused2.append(x_atten[-1] + x_fused[i] + exchange)
             elif i == 0:
-                exchange = F.interpolate(x_fused[-1], scale_factor=2,
-                                     mode='bilinear', align_corners=False)
+                exchange = F.interpolate(x_fused2[-1], scale_factor=2,
+                                         mode='bilinear', align_corners=False)
                 exchange = self.convb[-1](exchange)
-                x_atten.append(self.fuse_layers[i](x[i]))
-                x_fused.append(x_atten[-1] + x[i] + exchange)
-        x_fused = x_fused[::-1]
+                x_atten.append(self.fuse_layers2[i](x[i]))
+                x_fused2.append(x_atten[-1] + x_fused[i] + exchange)
+        x_fused2 = x_fused2[::-1]
 
-        for i in range(len(x_fused)):
-            x_fused[i] = self.relu(x_fused[i])
+        for i in range(len(x_fused2)):
+            x_fused2[i] = self.relu(x_fused2[i])
 
-        return x_fused
+        return x_fused2
 
 
 # Stacked AAModules
