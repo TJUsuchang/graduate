@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from nets.deform import SimpleBottleneck, DeformSimpleBottleneck
+from nets.deform import *
 
 
 def conv3d(in_channels, out_channels, kernel_size=3, stride=1, dilation=1, groups=1):
@@ -340,7 +341,9 @@ class AdaptiveAggregationModule(nn.Module):
             self.branches.append(nn.Sequential(*branch))
 
         self.fuse_layers = nn.ModuleList()
-
+        self.fuse_layers2 = nn.ModuleList()
+        self.conva = nn.ModuleList()
+        self.convb = nn.ModuleList()
         # Adaptive cross-scale aggregation
         # For each output branch
         for i in range(self.num_output_branches):
@@ -370,6 +373,20 @@ class AdaptiveAggregationModule(nn.Module):
                                                 nn.BatchNorm2d(max_disp // (2 ** i))))
                     self.fuse_layers[-1].append(nn.Sequential(*layers))
 
+        for i in range(self.num_scales):
+            if i == 0:
+                self.fuse_layers2.append(globalpoolatten7())
+            elif i == 1:
+                self.fuse_layers2.append(globalpoolatten5())
+                self.convb.append(nn.Sequential(nn.Conv2d(32, 64, kernel_size=1, bias=False),
+                                  nn.BatchNorm2d(64),
+                                  nn.LeakyReLU(0.2, inplace=True)))
+            elif i == 2:
+                self.fuse_layers2.append(globalpoolatten3())
+                self.conva.append(nn.Sequential(nn.Conv2d(16, 32, kernel_size=1, bias=False),
+                                  nn.BatchNorm2d(32),
+                                  nn.LeakyReLU(0.2, inplace=True)))
+
         self.relu = nn.LeakyReLU(0.2, inplace=True)
 
     def forward(self, x):
@@ -384,7 +401,9 @@ class AdaptiveAggregationModule(nn.Module):
         if self.num_scales == 1:  # without fusions
             return x
 
+        x_atten = []
         x_fused = []
+        x_fused2 = []
         for i in range(len(self.fuse_layers)):
             for j in range(len(self.branches)):
                 if j == 0:
@@ -396,10 +415,28 @@ class AdaptiveAggregationModule(nn.Module):
                                                  mode='bilinear', align_corners=False)
                     x_fused[i] = x_fused[i] + exchange
 
-        for i in range(len(x_fused)):
-            x_fused[i] = self.relu(x_fused[i])
+        for i in range(2, -1, -1):
+            if i == 2:
+                x_atten.append(self.fuse_layers2[i](x_fused[i]))
+                x_fused2.append(x_atten[-1] + x_fused[i])
+            elif i == 1:
+                exchange = F.interpolate(x_fused2[-1], scale_factor=2,
+                                     mode='bilinear', align_corners=False)
+                exchange = self.conva[-1](exchange)
+                x_atten.append(self.fuse_layers2[i](x[i]))
+                x_fused2.append(x_atten[-1] + x_fused[i] + exchange)
+            elif i == 0:
+                exchange = F.interpolate(x_fused2[-1], scale_factor=2,
+                                     mode='bilinear', align_corners=False)
+                exchange = self.convb[-1](exchange)
+                x_atten.append(self.fuse_layers2[i](x[i]))
+                x_fused2.append(x_atten[-1] + x_fused[i] + exchange)
+        x_fused2 = x_fused2[::-1]
 
-        return x_fused
+        for i in range(len(x_fused2)):
+            x_fused2[i] = self.relu(x_fused2[i])
+
+        return x_fused2
 
 
 # Stacked AAModules
