@@ -374,14 +374,20 @@ class AdaptiveAggregationModule(nn.Module):
 
         for i in range(self.num_scales):
             if i == 0:
-                self.fuse_layers2.append(globalpoolatten7())
+                self.fuse_layers2.append(nn.Sequential(nn.Conv2d(64, 64, kernel_size=1, bias=False),
+                                         nn.BatchNorm2d(64),
+                                         nn.LeakyReLU(0.2, inplace=True)))
             elif i == 1:
-                self.fuse_layers2.append(globalpoolatten5())
+                self.fuse_layers2.append(nn.Sequential(nn.Conv2d(32, 32, kernel_size=1, bias=False),
+                                         nn.BatchNorm2d(32),
+                                         nn.LeakyReLU(0.2, inplace=True)))
                 self.convb.append(nn.Sequential(nn.Conv2d(32, 64, kernel_size=1, bias=False),
                                   nn.BatchNorm2d(64),
                                   nn.LeakyReLU(0.2, inplace=True)))
             elif i == 2:
-                self.fuse_layers2.append(globalpoolatten3())
+                self.fuse_layers2.append(nn.Sequential(nn.Conv2d(16, 16, kernel_size=1, bias=False),
+                                         nn.BatchNorm2d(16),
+                                         nn.LeakyReLU(0.2, inplace=True)))
                 self.conva.append(nn.Sequential(nn.Conv2d(16, 32, kernel_size=1, bias=False),
                                   nn.BatchNorm2d(32),
                                   nn.LeakyReLU(0.2, inplace=True)))
