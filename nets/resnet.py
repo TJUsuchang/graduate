@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from nets.deform import DeformBottleneck
+from nets.deform import *
 
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
@@ -75,6 +75,8 @@ class Bottleneck(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
+        self.sa = SpatialAttention()
+        self.ca = ChannelAttention()
 
     def forward(self, x):
         identity = x
@@ -89,6 +91,8 @@ class Bottleneck(nn.Module):
 
         out = self.conv3(out)
         out = self.bn3(out)
+
+        out = self.
 
         if self.downsample is not None:
             identity = self.downsample(x)
