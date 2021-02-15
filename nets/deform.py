@@ -183,6 +183,8 @@ class DeformBottleneck(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
+        self.ca = ChannelAttention(planes * self.expansion)
+        self.sa = SpatialAttention()
 
     def forward(self, x):
         identity = x
@@ -197,6 +199,9 @@ class DeformBottleneck(nn.Module):
 
         out = self.conv3(out)
         out = self.bn3(out)
+
+        out = self.sa(out) * out
+        out = self.ca(out) * out
 
         if self.downsample is not None:
             identity = self.downsample(x)
