@@ -187,7 +187,7 @@ class Model(object):
                                   filename='aanet_latest.pth')
 
             # Save checkpoint of specific epoch
-            if self.epoch % args.save_ckpt_freq == 0:
+            if self.epoch > 55:
                 model_dir = os.path.join(args.checkpoint_dir, 'models')
                 utils.check_path(model_dir)
                 utils.save_checkpoint(model_dir, self.optimizer, self.aanet,
@@ -357,7 +357,7 @@ class Model(object):
                                   filename='aanet_latest.pth')
 
             # Save checkpoint of specific epochs
-            if self.epoch % args.save_ckpt_freq == 0:
+            if self.epoch > 55:
                 model_dir = os.path.join(args.checkpoint_dir, 'models')
                 utils.check_path(model_dir)
                 utils.save_checkpoint(model_dir, self.optimizer, self.aanet,
