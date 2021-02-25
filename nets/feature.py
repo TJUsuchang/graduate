@@ -237,9 +237,9 @@ class globalatten0(nn.Module):
         self.conv1 = nn.Conv2d(2, 1, kernel_size=7, padding=3, bias=False)
         self.relu = nn.ReLU(inplace=True)
         self.sigmoid = nn.Sigmoid()
-        self.conv11 = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1, bias=False),
-                                   nn.BatchNorm2d(128),
-                                   nn.ReLU(inplace=True))
+        # self.conv11 = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1, bias=False),
+        #                            nn.BatchNorm2d(128),
+        #                            nn.ReLU(inplace=True))
 
     def forward(self, x):
         avg_out = torch.mean(x, dim=1, keepdim=True)
@@ -251,7 +251,7 @@ class globalatten0(nn.Module):
         atten = F.interpolate(atten, scale_factor=2, mode='bilinear', align_corners=False)
         local = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
         out = atten + local
-        out = self.conv11(out)
+        # out = self.conv11(out)
 
         return out
 
@@ -263,9 +263,9 @@ class globalatten1(nn.Module):
         self.conv1 = nn.Conv2d(2, 1, kernel_size=5, padding=2, bias=False)
         self.relu = nn.ReLU(inplace=True)
         self.sigmoid = nn.Sigmoid()
-        self.conv11 = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1, bias=False),
-                                    nn.BatchNorm2d(128),
-                                    nn.ReLU(inplace=True))
+        # self.conv11 = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1, bias=False),
+        #                             nn.BatchNorm2d(128),
+        #                             nn.ReLU(inplace=True))
 
     def forward(self, x):
         avg_out = torch.mean(x, dim=1, keepdim=True)
@@ -275,7 +275,7 @@ class globalatten1(nn.Module):
         out = self.sigmoid(out)
         atten = out * x
         out = atten + x
-        out = self.conv11(out)
+        # out = self.conv11(out)
 
         return out
 
@@ -293,9 +293,9 @@ class globalatten2(nn.Module):
                                    nn.ReLU(inplace=True))
         self.relu = nn.ReLU(inplace=True)
         self.sigmoid = nn.Sigmoid()
-        self.conv11 = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1, bias=False),
-                                    nn.BatchNorm2d(128),
-                                    nn.ReLU(inplace=True))
+        # self.conv11 = nn.Sequential(nn.Conv2d(128, 128, kernel_size=1, bias=False),
+        #                             nn.BatchNorm2d(128),
+        #                             nn.ReLU(inplace=True))
 
     def forward(self, x):
         avg_out = torch.mean(x, dim=1, keepdim=True)
@@ -307,7 +307,7 @@ class globalatten2(nn.Module):
         atten = self.conv2(atten)
         local = self.conv3(x)
         out = atten + local
-        out = self.conv11(out)
+        # out = self.conv11(out)
 
         return out
 
