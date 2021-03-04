@@ -488,19 +488,19 @@ class AdaptiveAggregation(nn.Module):
         for i in range(2, -1, -1):
             if i == 2:
                 x_atten.append(self.fuse_layers2[i](cost_volume[i]))
-                pre_out.append(x_atten[-1])
+                pre_out.append(x_atten[-1] + cost_volume[i])
             elif i == 1:
                 exchange = F.interpolate(pre_out[-1], scale_factor=2,
                                      mode='bilinear', align_corners=False)
                 exchange = self.conva[-1](exchange)
                 x_atten.append(self.fuse_layers2[i](cost_volume[i]))
-                pre_out.append(x_atten[-1] + exchange)
+                pre_out.append(x_atten[-1] + cost_volume[i] + exchange)
             elif i == 0:
                 exchange = F.interpolate(pre_out[-1], scale_factor=2,
                                      mode='bilinear', align_corners=False)
                 exchange = self.convb[-1](exchange)
                 x_atten.append(self.fuse_layers2[i](cost_volume[i]))
-                pre_out.append(x_atten[-1] + exchange)
+                pre_out.append(x_atten[-1] + cost_volume[i] + exchange)
         pre_out = pre_out[::-1]
 
         out = []  # 1/3, 1/6, 1/12
