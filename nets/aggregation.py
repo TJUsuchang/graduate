@@ -428,13 +428,13 @@ class AdaptiveAggregationModule(nn.Module):
                 exchange = F.interpolate(x_fused2[-1], scale_factor=2,
                                      mode='bilinear', align_corners=False)
                 exchange = self.conva[-1](exchange)
-                x_atten.append(self.fuse_layers2[i](x[i]))
+                x_atten.append(self.fuse_layers2[i](x_fused[i]))
                 x_fused2.append(x_atten[-1] + x_fused[i] + exchange)
             elif i == 0:
                 exchange = F.interpolate(x_fused2[-1], scale_factor=2,
                                      mode='bilinear', align_corners=False)
                 exchange = self.convb[-1](exchange)
-                x_atten.append(self.fuse_layers2[i](x[i]))
+                x_atten.append(self.fuse_layers2[i](x_fused[i]))
                 x_fused2.append(x_atten[-1] + x_fused[i] + exchange)
         x_fused2 = x_fused2[::-1]
 
