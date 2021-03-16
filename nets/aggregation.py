@@ -422,7 +422,7 @@ class AdaptiveAggregationModule(nn.Module):
 
         for i in range(2, -1, -1):
             if i == 2:
-                x_atten.append(self.fuse_layers2[i](x_fused[i]))
+                x_atten.append(self.fuse_layers2[i](x[i]))
                 x_fused2.append(x_atten[-1] + x_fused[i])
             elif i == 1:
                 exchange = F.interpolate(x_fused2[-1], scale_factor=2,
