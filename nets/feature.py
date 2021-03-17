@@ -234,20 +234,25 @@ class globalatten0(nn.Module):
         super(globalatten0, self).__init__()
 
         self.in_channels = in_channels
-        self.conv1 = nn.Conv2d(2, 1, kernel_size=7, padding=3, bias=False)
+        # self.conv1 = nn.Conv2d(2, 1, kernel_size=7, padding=3, bias=False)
+        self.conv1 = nn.Sequential(nn.Conv2d(in_channels, in_channels, 1),
+                                   nn.BatchNorm2d(in_channels),
+                                   nn.ReLU(inplace=True))
         self.relu = nn.ReLU(inplace=True)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        avg_out = torch.mean(x, dim=1, keepdim=True)
-        max_out, _ = torch.max(x, dim=1, keepdim=True)
-        cat = torch.cat([avg_out, max_out], dim=1)
-        out = self.conv1(cat)
-        out = self.sigmoid(out)
-        atten = out * x
-        atten = F.interpolate(atten, scale_factor=2, mode='bilinear', align_corners=False)
-        local = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
-        out = atten + local
+        # avg_out = torch.mean(x, dim=1, keepdim=True)
+        # max_out, _ = torch.max(x, dim=1, keepdim=True)
+        # cat = torch.cat([avg_out, max_out], dim=1)
+        # out = self.conv1(cat)
+        # out = self.sigmoid(out)
+        # atten = out * x
+        # atten = F.interpolate(atten, scale_factor=2, mode='bilinear', align_corners=False)
+        # local = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
+        # out = atten + local
+        out = self.conv1(x)
+        out = F.interpolate(out, scale_factor=2, mode='bilinear', align_corners=False)
 
         return out
 
@@ -256,19 +261,22 @@ class globalatten1(nn.Module):
         super(globalatten1, self).__init__()
 
         self.in_channels = in_channels
-        self.conv1 = nn.Conv2d(2, 1, kernel_size=5, padding=2, bias=False)
+        # self.conv1 = nn.Conv2d(2, 1, kernel_size=5, padding=2, bias=False)
+        self.conv1 = nn.Sequential(nn.Conv2d(in_channels, in_channels, 1),
+                                   nn.BatchNorm2d(in_channels),
+                                   nn.ReLU(inplace=True))
         self.relu = nn.ReLU(inplace=True)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        avg_out = torch.mean(x, dim=1, keepdim=True)
-        max_out, _ = torch.max(x, dim=1, keepdim=True)
-        cat = torch.cat([avg_out, max_out], dim=1)
-        out = self.conv1(cat)
-        out = self.sigmoid(out)
-        atten = out * x
-        out = atten + x
-
+        # avg_out = torch.mean(x, dim=1, keepdim=True)
+        # max_out, _ = torch.max(x, dim=1, keepdim=True)
+        # cat = torch.cat([avg_out, max_out], dim=1)
+        # out = self.conv1(cat)
+        # out = self.sigmoid(out)
+        # atten = out * x
+        # out = atten + x
+        out = self.conv1(x)
         return out
 
 class globalatten2(nn.Module):
@@ -276,26 +284,27 @@ class globalatten2(nn.Module):
         super(globalatten2, self).__init__()
 
         self.in_channels = in_channels
-        self.conv1 = nn.Conv2d(2, 1, kernel_size=3, padding=1, bias=False)
+        # self.conv1 = nn.Conv2d(2, 1, kernel_size=3, padding=1, bias=False)
         self.conv2 = nn.Sequential(nn.Conv2d(in_channels, in_channels, 3, stride=2, padding=1),
                                    nn.BatchNorm2d(in_channels),
                                    nn.ReLU(inplace=True))
-        self.conv3 = nn.Sequential(nn.Conv2d(in_channels, in_channels, 3, stride=2, padding=1),
-                                   nn.BatchNorm2d(in_channels),
-                                   nn.ReLU(inplace=True))
+        # self.conv3 = nn.Sequential(nn.Conv2d(in_channels, in_channels, 3, stride=2, padding=1),
+        #                            nn.BatchNorm2d(in_channels),
+        #                            nn.ReLU(inplace=True))
         self.relu = nn.ReLU(inplace=True)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        avg_out = torch.mean(x, dim=1, keepdim=True)
-        max_out, _ = torch.max(x, dim=1, keepdim=True)
-        cat = torch.cat([avg_out, max_out], dim=1)
-        out = self.conv1(cat)
-        out = self.sigmoid(out)
-        atten = out * x
-        atten = self.conv2(atten)
-        local = self.conv3(x)
-        out = atten + local
+        # avg_out = torch.mean(x, dim=1, keepdim=True)
+        # max_out, _ = torch.max(x, dim=1, keepdim=True)
+        # cat = torch.cat([avg_out, max_out], dim=1)
+        # out = self.conv1(cat)
+        # out = self.sigmoid(out)
+        # atten = out * x
+        # atten = self.conv2(atten)
+        # local = self.conv3(x)
+        # out = atten + local
+        out = self.conv2(x)
 
         return out
 
