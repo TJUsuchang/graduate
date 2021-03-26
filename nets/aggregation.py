@@ -308,6 +308,173 @@ class GCNetAggregation(nn.Module):
 
         return out
 
+class globalatten0(nn.Module):
+    def __init__(self, in_channels=32):
+        super(globalatten0, self).__init__()
+
+        self.in_channels = in_channels
+        self.conv1 = nn.Conv2d(2, 1, kernel_size=7, padding=3, bias=False)
+        self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
+        self.conv2 = nn.Sequential(nn.Conv2d(32, 64, 1),
+                                   nn.BatchNorm2d(64),
+                                   nn.ReLU(inplace=True))
+
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        out = self.conv1(cat)
+        out = self.sigmoid(out)
+        atten = out * x
+        atten = F.interpolate(atten, scale_factor=2, mode='bilinear', align_corners=False)
+        local = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
+        out = atten + local
+        out = self.conv2(out)
+
+        return out
+
+class globalatten1(nn.Module):
+    def __init__(self, in_channels=32):
+        super(globalatten1, self).__init__()
+
+        self.in_channels = in_channels
+        self.conv1 = nn.Conv2d(2, 1, kernel_size=5, padding=2, bias=False)
+        self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
+        self.conv2 = nn.Sequential(nn.Conv2d(32, 32, 1),
+                                   nn.BatchNorm2d(32),
+                                   nn.ReLU(inplace=True))
+
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        out = self.conv1(cat)
+        out = self.sigmoid(out)
+        atten = out * x
+        out = atten + x
+        out = self.conv2(out)
+
+        return out
+
+class globalatten2(nn.Module):
+    def __init__(self, in_channels=32):
+        super(globalatten2, self).__init__()
+
+        self.in_channels = in_channels
+        self.conv1 = nn.Conv2d(2, 1, kernel_size=3, padding=1, bias=False)
+        self.conv2 = nn.Sequential(nn.Conv2d(in_channels, in_channels, 3, stride=2, padding=1),
+                                   nn.BatchNorm2d(in_channels),
+                                   nn.ReLU(inplace=True))
+        self.conv3 = nn.Sequential(nn.Conv2d(in_channels, in_channels, 3, stride=2, padding=1),
+                                   nn.BatchNorm2d(in_channels),
+                                   nn.ReLU(inplace=True))
+        self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
+        self.conv4 = nn.Sequential(nn.Conv2d(32, 16, 1),
+                                   nn.BatchNorm2d(16),
+                                   nn.ReLU(inplace=True))
+
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        out = self.conv1(cat)
+        out = self.sigmoid(out)
+        atten = out * x
+        atten = self.conv2(atten)
+        local = self.conv3(x)
+        out = atten + local
+        out = self.conv4(out)
+
+        return out
+
+
+class FeaturePyramidNetwork(nn.Module):
+    def __init__(self, in_channels,
+                 num_levels=3):
+        super(FeaturePyramidNetwork, self).__init__()
+
+        assert isinstance(in_channels, list)
+
+        self.in_channels = in_channels
+        self.fpn_convs = nn.ModuleList()
+        self.build_conv = nn.ModuleList()
+        self.catconvs = nn.ModuleList()
+
+        for i in range(num_levels):
+            if i == 0:
+                # self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], in_channels[i] // 4,
+                #                                                kernel_size=3, stride=2, padding=1),
+                #                                      nn.BatchNorm2d(in_channels[i] // 4),
+                #                                      nn.ReLU(inplace=True)))
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], in_channels[i] // 4,
+                                                               kernel_size=5, stride=2, padding=2),
+                                                     nn.BatchNorm2d(in_channels[i] // 4),
+                                                     nn.ReLU(inplace=True)))
+                self.fpn_convs.append(globalatten0())
+                self.catconvs.append(nn.Sequential(nn.Conv2d(in_channels[i], in_channels[i], 1),
+                                     nn.BatchNorm2d(in_channels[i]),
+                                     nn.ReLU(inplace=True),
+                                     nn.Conv2d(in_channels[i], in_channels[i], 3, padding=1),
+                                     nn.BatchNorm2d(in_channels[i]),
+                                     nn.ReLU(inplace=True),
+                                     nn.Conv2d(in_channels[i], in_channels[i], 1),
+                                     nn.BatchNorm2d(in_channels[i]),
+                                     nn.ReLU(inplace=True)))
+            elif i == 1:
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], in_channels[i] // 4,
+                                                               kernel_size=3, stride=1, padding=1),
+                                                     nn.BatchNorm2d(in_channels[i] // 2),
+                                                     nn.ReLU(inplace=True)))
+                self.fpn_convs.append(globalatten1())
+                self.catconvs.append(nn.Sequential(nn.Conv2d(in_channels[i], in_channels[i], 1),
+                                                   nn.BatchNorm2d(in_channels[i]),
+                                                   nn.ReLU(inplace=True),
+                                                   nn.Conv2d(in_channels[i], in_channels[i], 3, padding=1),
+                                                   nn.BatchNorm2d(in_channels[i]),
+                                                   nn.ReLU(inplace=True),
+                                                   nn.Conv2d(in_channels[i], in_channels[i], 1),
+                                                   nn.BatchNorm2d(in_channels[i]),
+                                                   nn.ReLU(inplace=True)))
+            elif i == 2:
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], in_channels[i] // 2,
+                                                               kernel_size=1),
+                                                     nn.BatchNorm2d(in_channels[i]),
+                                                     nn.ReLU(inplace=True)))
+                self.fpn_convs.append(globalatten2())
+                self.catconvs.append(nn.Sequential(nn.Conv2d(in_channels[i], in_channels[i], 1),
+                                                   nn.BatchNorm2d(in_channels[i]),
+                                                   nn.ReLU(inplace=True),
+                                                   nn.Conv2d(in_channels[i], in_channels[i], 3, padding=1),
+                                                   nn.BatchNorm2d(in_channels[i]),
+                                                   nn.ReLU(inplace=True),
+                                                   nn.Conv2d(in_channels[i], in_channels[i], 1),
+                                                   nn.BatchNorm2d(in_channels[i]),
+                                                   nn.ReLU(inplace=True)))
+
+    def forward(self, inputs):
+        # Inputs: resolution high -> low
+        assert len(self.in_channels) == len(inputs)
+        build = []
+        for i in range(len(inputs)):
+            if i == 0:
+                build.append(self.build_conv[0](inputs[0]))
+                # build.append(self.build_conv[1](inputs[0]))
+            elif i == 1:
+                build.append(self.build_conv[1](inputs[1]))
+            elif i == 2:
+                build.append(F.interpolate((self.build_conv[2](inputs[2])),
+                                           scale_factor=2, mode='bilinear', align_corners=False))
+        cat = torch.cat((build[0], build[1], build[2]), dim=1)
+        # pre_out = self.catconvs(cat)
+        pre_out = [self.catconvs[i](cat) for i in range(len(inputs))]
+        out = [
+            self.fpn_convs[i](pre_out) for i in range(len(inputs))
+        ]
+
+        return out
 
 # Adaptive intra-scale aggregation & adaptive cross-scale aggregation
 class AdaptiveAggregationModule(nn.Module):
@@ -438,6 +605,7 @@ class AdaptiveAggregation(nn.Module):
                                                      simple_bottleneck=simple_bottleneck_module))
 
         self.fusions = nn.Sequential(*fusions)
+        self.fpn_agg = FeaturePyramidNetwork(in_channels=[64, 32, 16])
 
         self.final_conv = nn.ModuleList()
         for i in range(self.num_scales):
@@ -454,6 +622,7 @@ class AdaptiveAggregation(nn.Module):
         for i in range(self.num_fusions):
             fusion = self.fusions[i]
             cost_volume = fusion(cost_volume)
+            cost_volume = self.fpn_agg(cost_volume)
 
         # Make sure the final output is in the first position
         out = []  # 1/3, 1/6, 1/12
