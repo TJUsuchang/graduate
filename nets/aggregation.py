@@ -497,6 +497,7 @@ class AdaptiveAggregationModule(nn.Module):
         self.num_blocks = num_blocks
 
         self.branches = nn.ModuleList()
+        self.fpn_agg = FeaturePyramidNetwork(in_channels=[64, 32, 16])
 
         # Adaptive intra-scale aggregation
         for i in range(self.num_scales):
@@ -571,6 +572,7 @@ class AdaptiveAggregationModule(nn.Module):
 
         for i in range(len(x_fused)):
             x_fused[i] = self.relu(x_fused[i])
+        x_fused = self.fpn_agg(x_fused)
 
         return x_fused
 
@@ -611,7 +613,7 @@ class AdaptiveAggregation(nn.Module):
                                                      simple_bottleneck=simple_bottleneck_module))
 
         self.fusions = nn.Sequential(*fusions)
-        self.fpn_agg = FeaturePyramidNetwork(in_channels=[64, 32, 16])
+        # self.fpn_agg = FeaturePyramidNetwork(in_channels=[64, 32, 16])
 
         self.final_conv = nn.ModuleList()
         for i in range(self.num_scales):
@@ -628,7 +630,7 @@ class AdaptiveAggregation(nn.Module):
         for i in range(self.num_fusions):
             fusion = self.fusions[i]
             cost_volume = fusion(cost_volume)
-            cost_volume = self.fpn_agg(cost_volume)
+            # cost_volume = self.fpn_agg(cost_volume)
 
         # Make sure the final output is in the first position
         out = []  # 1/3, 1/6, 1/12
