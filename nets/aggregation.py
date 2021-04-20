@@ -343,54 +343,38 @@ class AdaptiveAggregationModule(nn.Module):
         self.fuse_layers2 = nn.ModuleList()
         self.conva = nn.ModuleList()
         self.convb = nn.ModuleList()
-        # Adaptive cross-scale aggregation
-        # For each output branch
-        for i in range(self.num_output_branches):
-            self.fuse_layers.append(nn.ModuleList())
-            # For each branch (different scale)
-            for j in range(self.num_scales):
-                if i == j:
-                    # Identity
-                    self.fuse_layers[-1].append(nn.Identity())
-                elif i < j:
-                    self.fuse_layers[-1].append(
-                        nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
-                                                kernel_size=1, bias=False),
-                                      nn.BatchNorm2d(max_disp // (2 ** i)),
-                                      ))
-                elif i > j:
-                    layers = nn.ModuleList()
-                    for k in range(i - j - 1):
-                        layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** j),
-                                                              kernel_size=3, stride=2, padding=1, bias=False),
-                                                    nn.BatchNorm2d(max_disp // (2 ** j)),
-                                                    nn.LeakyReLU(0.2, inplace=True),
-                                                    ))
-
-                    layers.append(nn.Sequential(nn.Conv2d(max_disp // (2 ** j), max_disp // (2 ** i),
-                                                          kernel_size=3, stride=2, padding=1, bias=False),
-                                                nn.BatchNorm2d(max_disp // (2 ** i))))
-                    self.fuse_layers[-1].append(nn.Sequential(*layers))
+        self.convaa = nn.ModuleList()
+        self.convbb = nn.ModuleList()
+        self.convaaa = nn.ModuleList()
 
         for i in range(self.num_scales):
             if i == 0:
                 self.fuse_layers2.append(nn.Sequential(nn.Conv2d(64, 64, kernel_size=1, bias=False),
-                                         nn.BatchNorm2d(64),
-                                         nn.LeakyReLU(0.2, inplace=True)))
+                                                       nn.BatchNorm2d(64),
+                                                       nn.LeakyReLU(0.2, inplace=True)))
             elif i == 1:
                 self.fuse_layers2.append(nn.Sequential(nn.Conv2d(32, 32, kernel_size=1, bias=False),
-                                         nn.BatchNorm2d(32),
-                                         nn.LeakyReLU(0.2, inplace=True)))
+                                                       nn.BatchNorm2d(32),
+                                                       nn.LeakyReLU(0.2, inplace=True)))
                 self.convb.append(nn.Sequential(nn.Conv2d(32, 64, kernel_size=1, bias=False),
-                                  nn.BatchNorm2d(64),
-                                  nn.LeakyReLU(0.2, inplace=True)))
+                                                nn.BatchNorm2d(64),
+                                                nn.LeakyReLU(0.2, inplace=True)))
+                self.convbb.append(nn.Sequential(nn.Conv2d(32, 64, kernel_size=1, bias=False),
+                                                 nn.BatchNorm2d(64),
+                                                 nn.LeakyReLU(0.2, inplace=True)))
             elif i == 2:
                 self.fuse_layers2.append(nn.Sequential(nn.Conv2d(16, 16, kernel_size=1, bias=False),
                                          nn.BatchNorm2d(16),
                                          nn.LeakyReLU(0.2, inplace=True)))
                 self.conva.append(nn.Sequential(nn.Conv2d(16, 32, kernel_size=1, bias=False),
-                                  nn.BatchNorm2d(32),
-                                  nn.LeakyReLU(0.2, inplace=True)))
+                                                nn.BatchNorm2d(32),
+                                                nn.LeakyReLU(0.2, inplace=True)))
+                self.convaa.append(nn.Sequential(nn.Conv2d(16, 32, kernel_size=1, bias=False),
+                                                 nn.BatchNorm2d(32),
+                                                 nn.LeakyReLU(0.2, inplace=True)))
+                self.convaaa.append(nn.Sequential(nn.Conv2d(16, 64, kernel_size=1, bias=False),
+                                                 nn.BatchNorm2d(64),
+                                                 nn.LeakyReLU(0.2, inplace=True)))
 
         self.relu = nn.LeakyReLU(0.2, inplace=True)
 
@@ -408,40 +392,39 @@ class AdaptiveAggregationModule(nn.Module):
 
         x_atten = []
         x_fused = []
-        x_fused2 = []
-        for i in range(len(self.fuse_layers)):
-            for j in range(len(self.branches)):
-                if j == 0:
-                    x_fused.append(self.fuse_layers[i][0](x[0]))
-                else:
-                    exchange = self.fuse_layers[i][j](x[j])
-                    if exchange.size()[2:] != x_fused[i].size()[2:]:
-                        exchange = F.interpolate(exchange, size=x_fused[i].size()[2:],
-                                                 mode='bilinear', align_corners=False)
-                    x_fused[i] = x_fused[i] + exchange
 
         for i in range(2, -1, -1):
             if i == 2:
-                x_atten.append(self.fuse_layers2[i](x_fused[i]))
-                x_fused2.append(x_atten[-1] + x_fused[i])
+                x_atten.append(self.fuse_layers2[i](x[i]))
+                x_fused.append(x_atten[-1] + x[i])
             elif i == 1:
-                exchange = F.interpolate(x_fused2[-1], scale_factor=2,
-                                     mode='bilinear', align_corners=False)
-                exchange = self.conva[-1](exchange)
+                exchange1 = F.interpolate(x_fused[-1], scale_factor=2,
+                                         mode='bilinear', align_corners=False)
+                exchange1 = self.conva[-1](exchange1)
+                exchange2 = F.interpolate(x[2], scale_factor=2,
+                                          mode='bilinear', align_corners=False)
+                exchange2 = self.convaa[-1](exchange2)
                 x_atten.append(self.fuse_layers2[i](x[i]))
-                x_fused2.append(x_atten[-1] + x_fused[i] + exchange)
+                x_fused.append(x_atten[-1] + x[i] + exchange1 + exchange2)
             elif i == 0:
-                exchange = F.interpolate(x_fused2[-1], scale_factor=2,
-                                     mode='bilinear', align_corners=False)
-                exchange = self.convb[-1](exchange)
+                exchange1 = F.interpolate(x_fused[-1], scale_factor=2,
+                                          mode='bilinear', align_corners=False)
+                exchange1 = self.convb[-1](exchange1)
+                exchange2 = F.interpolate(x[1], scale_factor=2,
+                                          mode='bilinear', align_corners=False)
+                exchange2 = self.convbb[-1](exchange2)
+                exchange3 = F.interpolate(x[2], scale_factor=4,
+                                          mode='bilinear', align_corners=False)
+                exchange3 = self.convaaa[-1](exchange3)
                 x_atten.append(self.fuse_layers2[i](x[i]))
-                x_fused2.append(x_atten[-1] + x_fused[i] + exchange)
-        x_fused2 = x_fused2[::-1]
+                x_fused.append(x_atten[-1] + x[i] + exchange1 + exchange2 + exchange3)
 
-        for i in range(len(x_fused2)):
-            x_fused2[i] = self.relu(x_fused2[i])
+        x_fused = x_fused[::-1]
 
-        return x_fused2
+        for i in range(len(x_fused)):
+            x_fused[i] = self.relu(x_fused[i])
+
+        return x_fused
 
 
 # Stacked AAModules
