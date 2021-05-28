@@ -329,6 +329,18 @@ class AdaptiveAggregationModule(nn.Module):
         for i in range(self.num_scales):
             num_candidates = max_disp // (2 ** i)
             branch = nn.ModuleList()
+            self.convd = nn.Sequential(nn.Conv2d(64, 32, kernel_size=3, stride=2, padding=1, bias=False),
+                                       nn.BatchNorm2d(32),
+                                       nn.LeakyReLU(0.2, inplace=True))
+            self.convdd = nn.Sequential(nn.Conv2d(32, 16, kernel_size=3, stride=2, padding=1, bias=False),
+                                        nn.BatchNorm2d(16),
+                                        nn.LeakyReLU(0.2, inplace=True))
+            self.convddd = nn.Sequential(nn.Conv2d(64, 32, kernel_size=3, stride=2, padding=1, bias=False),
+                                         nn.BatchNorm2d(32),
+                                         nn.LeakyReLU(0.2, inplace=True),
+                                         nn.Conv2d(32, 16, kernel_size=3, stride=2, padding=1, bias=False),
+                                         nn.BatchNorm2d(16),
+                                         nn.LeakyReLU(0.2, inplace=True))
             for j in range(num_blocks):
                 if simple_bottleneck:
                     branch.append(SimpleBottleneck(num_candidates, num_candidates))
@@ -398,9 +410,24 @@ class AdaptiveAggregationModule(nn.Module):
 
         for i in range(len(self.branches)):
             branch = self.branches[i]
-            for j in range(self.num_blocks):
-                dconv = branch[j]
-                x[i] = dconv(x[i])
+            if i == 0:
+                x[i] = x[i]
+                for j in range(self.num_blocks):
+                    dconv = branch[j]
+                    x[i] = dconv(x[i])
+            elif i == 1:
+                _x = self.convd(x[0])
+                x[i] = x[i] + _x
+                for j in range(self.num_blocks):
+                    dconv = branch[j]
+                    x[i] = dconv(x[i])
+            elif i == 2:
+                _x = self.convdd(x[1])
+                __x = self.convddd(x[0])
+                x[i] = x[i] + _x + __x
+                for j in range(self.num_blocks):
+                    dconv = branch[j]
+                    x[i] = dconv(x[i])
 
         if self.num_scales == 1:  # without fusions
             return x
