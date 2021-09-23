@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from nets.deform import SimpleBottleneck, DeformSimpleBottleneck
-from nets.asff import ASFF
+from nets.asff import *
 
 def conv3d(in_channels, out_channels, kernel_size=3, stride=1, dilation=1, groups=1):
     return nn.Sequential(nn.Conv3d(in_channels, out_channels, kernel_size=kernel_size,
@@ -345,7 +345,12 @@ class AdaptiveAggregationModule(nn.Module):
         # For each output branch
         self.csa = nn.ModuleList()
         for i in range(self.num_output_branches):
-            self.csa.append(ASFF(level=(2-i)))
+            if i == 0:
+                self.csa.append(ASFF2(level=2))
+            elif i == 1:
+                self.csa.append(ASFF1(level=1))
+            elif i == 2:
+                self.csa.append(ASFF0(level=0))
 
         self.relu = nn.LeakyReLU(0.2, inplace=True)
 
@@ -369,8 +374,8 @@ class AdaptiveAggregationModule(nn.Module):
         for i in range(len(self.branches)):
             x_fused.append(self.csa[i](x_level_0, x_level_1, x_level_2))
 
-        for i in range(len(x_fused)):
-            x_fused[i] = self.relu(x_fused[i])
+        # for i in range(len(x_fused)):
+        #     x_fused[i] = self.relu(x_fused[i])
 
         return x_fused
 
