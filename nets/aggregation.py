@@ -439,8 +439,8 @@ class AdaptiveAggregationModule(nn.Module):
                 x_fused2.append(x_atten[-1] + x_fused[i] + exchange)
         x_fused2 = x_fused2[::-1]
 
-        for i in range(len(x_fused2)):
-            x_fused2[i] = self.relu(x_fused2[i])
+        # for i in range(len(x_fused2)):
+        #     x_fused2[i] = self.relu(x_fused2[i])
 
         return x_fused2
 
