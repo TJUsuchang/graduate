@@ -245,9 +245,9 @@ class globalatten0(nn.Module):
         out = self.conv1(cat)
         out = self.sigmoid(out)
         atten = out * x
-        atten = F.interpolate(atten, scale_factor=2, mode='bilinear', align_corners=False)
-        local = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
-        out = atten + local
+        # atten = F.interpolate(atten, scale_factor=4, mode='bilinear', align_corners=False)
+        # local = F.interpolate(x, scale_factor=4, mode='bilinear', align_corners=False)
+        out = atten + x
 
         return out
 
@@ -257,6 +257,9 @@ class globalatten1(nn.Module):
 
         self.in_channels = in_channels
         self.conv1 = nn.Conv2d(2, 1, kernel_size=5, padding=2, bias=False)
+        self.conv2 = nn.Sequential(nn.Conv2d(in_channels, in_channels, 3, stride=2, padding=1),
+                                   nn.BatchNorm2d(in_channels),
+                                   nn.ReLU(inplace=True))
         self.relu = nn.ReLU(inplace=True)
         self.sigmoid = nn.Sigmoid()
 
@@ -268,6 +271,7 @@ class globalatten1(nn.Module):
         out = self.sigmoid(out)
         atten = out * x
         out = atten + x
+        out = self.conv2(out)
 
         return out
 
@@ -293,9 +297,10 @@ class globalatten2(nn.Module):
         out = self.conv1(cat)
         out = self.sigmoid(out)
         atten = out * x
-        atten = self.conv2(atten)
-        local = self.conv3(x)
-        out = atten + local
+        # atten = self.conv2(atten)
+        # local = self.conv3(x)
+        out = atten + x
+        out = self.conv3(self.conv2(out))
 
         return out
 
@@ -322,11 +327,11 @@ class FeaturePyramidNetwork(nn.Module):
         for i in range(num_levels):
             if i == 0:
                 self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels // 4,
-                                                               kernel_size=3, stride=2, padding=1),
+                                                               kernel_size=3, stride=1, padding=1),
                                                      nn.BatchNorm2d(out_channels // 4),
                                                      nn.ReLU(inplace=True)))
                 self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels // 4,
-                                                               kernel_size=5, stride=2, padding=2),
+                                                               kernel_size=1, stride=1, padding=0),
                                                      nn.BatchNorm2d(out_channels // 4),
                                                      nn.ReLU(inplace=True)))
                 self.fpn_convs.append(globalatten0())
@@ -352,10 +357,11 @@ class FeaturePyramidNetwork(nn.Module):
                 build.append(self.build_conv[0](inputs[0]))
                 build.append(self.build_conv[1](inputs[0]))
             elif i == 1:
-                build.append(self.build_conv[2](inputs[1]))
+                build.append(F.interpolate((self.build_conv[2](inputs[1])),
+                                           scale_factor=2, mode='bilinear', align_corners=False))
             elif i == 2:
                 build.append(F.interpolate((self.build_conv[3](inputs[2])),
-                                           scale_factor=2, mode='bilinear', align_corners=False))
+                                           scale_factor=4, mode='bilinear', align_corners=False))
         cat = torch.cat((build[0], build[1], build[2], build[3]), dim=1)
         pre_out = self.catconvs(cat)
         out = [
