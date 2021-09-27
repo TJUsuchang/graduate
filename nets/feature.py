@@ -178,53 +178,143 @@ class FeaturePyrmaid(nn.Module):
         return [x, out1, out2]
 
 
+class globalatten0(nn.Module):
+    def __init__(self, in_channels=128):
+        super(globalatten0, self).__init__()
+
+        self.in_channels = in_channels
+        self.conv1 = nn.Conv2d(2, 1, kernel_size=5, padding=2, bias=False)
+        self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        out = self.conv1(cat)
+        out = self.sigmoid(out)
+        atten = out * x
+        # atten = F.interpolate(atten, scale_factor=4, mode='bilinear', align_corners=False)
+        # local = F.interpolate(x, scale_factor=4, mode='bilinear', align_corners=False)
+        out = atten + x
+
+        return out
+
+class globalatten1(nn.Module):
+    def __init__(self, in_channels=128):
+        super(globalatten1, self).__init__()
+
+        self.in_channels = in_channels
+        self.conv1 = nn.Conv2d(2, 1, kernel_size=3, padding=1, bias=False)
+        self.conv2 = nn.Sequential(nn.Conv2d(in_channels, in_channels, 3, stride=2, padding=1),
+                                   nn.BatchNorm2d(in_channels),
+                                   nn.ReLU(inplace=True))
+        self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        out = self.conv1(cat)
+        out = self.sigmoid(out)
+        atten = out * x
+        out = atten + x
+        out = self.conv2(out)
+
+        return out
+
+class globalatten2(nn.Module):
+    def __init__(self, in_channels=128):
+        super(globalatten2, self).__init__()
+
+        self.in_channels = in_channels
+        self.conv1 = nn.Conv2d(2, 1, kernel_size=1, padding=0, bias=False)
+        self.conv2 = nn.Sequential(nn.Conv2d(in_channels, in_channels, 3, stride=2, padding=1),
+                                   nn.BatchNorm2d(in_channels),
+                                   nn.ReLU(inplace=True))
+        self.conv3 = nn.Sequential(nn.Conv2d(in_channels, in_channels, 3, stride=2, padding=1),
+                                   nn.BatchNorm2d(in_channels),
+                                   nn.ReLU(inplace=True))
+        self.relu = nn.ReLU(inplace=True)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        cat = torch.cat([avg_out, max_out], dim=1)
+        out = self.conv1(cat)
+        out = self.sigmoid(out)
+        atten = out * x
+        # atten = self.conv2(atten)
+        # local = self.conv3(x)
+        out = atten + x
+        out = self.conv3(self.conv2(out))
+
+        return out
+
+
 class FeaturePyramidNetwork(nn.Module):
     def __init__(self, in_channels, out_channels=128,
                  num_levels=3):
-        # FPN paper uses 256 out channels by default
         super(FeaturePyramidNetwork, self).__init__()
 
         assert isinstance(in_channels, list)
 
         self.in_channels = in_channels
-
-        self.lateral_convs = nn.ModuleList()
         self.fpn_convs = nn.ModuleList()
-
+        self.build_conv = nn.ModuleList()
+        self.catconvs = nn.Sequential(nn.Conv2d(out_channels, out_channels, 1),
+                                      nn.BatchNorm2d(out_channels),
+                                      nn.ReLU(inplace=True),
+                                      nn.Conv2d(out_channels, out_channels, 3, padding=1),
+                                      nn.BatchNorm2d(out_channels),
+                                      nn.ReLU(inplace=True),
+                                      nn.Conv2d(out_channels, out_channels, 1),
+                                      nn.BatchNorm2d(out_channels),
+                                      nn.ReLU(inplace=True))
         for i in range(num_levels):
-            lateral_conv = nn.Conv2d(in_channels[i], out_channels, 1)
-            fpn_conv = nn.Sequential(
-                nn.Conv2d(out_channels, out_channels, 3, padding=1),
-                nn.BatchNorm2d(out_channels),
-                nn.ReLU(inplace=True))
-
-            self.lateral_convs.append(lateral_conv)
-            self.fpn_convs.append(fpn_conv)
-
-        # Initialize weights
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.xavier_uniform_(m.weight, gain=1)
-                if hasattr(m, 'bias'):
-                    nn.init.constant_(m.bias, 0)
+            if i == 0:
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels // 4,
+                                                               kernel_size=3, stride=1, padding=1),
+                                                     nn.BatchNorm2d(out_channels // 4),
+                                                     nn.ReLU(inplace=True)))
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels // 4,
+                                                               kernel_size=1, stride=1, padding=0),
+                                                     nn.BatchNorm2d(out_channels // 4),
+                                                     nn.ReLU(inplace=True)))
+                self.fpn_convs.append(globalatten0())
+            elif i == 1:
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels // 4,
+                                                               kernel_size=1),
+                                                     nn.BatchNorm2d(out_channels // 4),
+                                                     nn.ReLU(inplace=True)))
+                self.fpn_convs.append(globalatten1())
+            elif i == 2:
+                self.build_conv.append(nn.Sequential(nn.Conv2d(in_channels[i], out_channels // 4,
+                                                               kernel_size=1),
+                                                     nn.BatchNorm2d(out_channels // 4),
+                                                     nn.ReLU(inplace=True)))
+                self.fpn_convs.append(globalatten2())
 
     def forward(self, inputs):
         # Inputs: resolution high -> low
         assert len(self.in_channels) == len(inputs)
-
-        # Build laterals
-        laterals = [lateral_conv(inputs[i])
-                    for i, lateral_conv in enumerate(self.lateral_convs)]
-
-        # Build top-down path
-        used_backbone_levels = len(laterals)
-        for i in range(used_backbone_levels - 1, 0, -1):
-            laterals[i - 1] += F.interpolate(
-                laterals[i], scale_factor=2, mode='nearest')
-
-        # Build outputs
+        build = []
+        for i in range(len(inputs)):
+            if i == 0:
+                build.append(self.build_conv[0](inputs[0]))
+                build.append(self.build_conv[1](inputs[0]))
+            elif i == 1:
+                build.append(F.interpolate((self.build_conv[2](inputs[1])),
+                                           scale_factor=2, mode='bilinear', align_corners=False))
+            elif i == 2:
+                build.append(F.interpolate((self.build_conv[3](inputs[2])),
+                                           scale_factor=4, mode='bilinear', align_corners=False))
+        cat = torch.cat((build[0], build[1], build[2], build[3]), dim=1)
+        pre_out = self.catconvs(cat)
         out = [
-            self.fpn_convs[i](laterals[i]) for i in range(used_backbone_levels)
+            self.fpn_convs[i](pre_out) for i in range(len(inputs))
         ]
 
         return out
