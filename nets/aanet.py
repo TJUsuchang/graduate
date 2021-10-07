@@ -54,7 +54,7 @@ class AANet(nn.Module):
             self.max_disp = max_disp // 3
         elif feature_type == 'aanet':
             self.feature_extractor = AANetFeature(feature_mdconv=(not no_feature_mdconv))
-            self.max_disp = max_disp // 3
+            self.max_disp = 64
         else:
             raise NotImplementedError
 
