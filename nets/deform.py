@@ -185,13 +185,14 @@ class SimpleBottleneck(nn.Module):
         out = self.conv3(out)
         out = self.bn3(out)
 
+        out = self.sa(out) * out
+
         if self.downsample is not None:
             identity = self.downsample(x)
 
         out += identity
         out = self.relu(out)
 
-        out = self.sa(out) * out
 
         return out
 
